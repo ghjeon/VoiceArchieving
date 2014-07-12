@@ -123,7 +123,7 @@ public class MainActivity extends Activity {
                 if (mStartPlaying) {
                     setText("Stop playing"); // 버튼의 텍스트 세팅
                 } else {
-                    setText("Start playing"); // 버튼의 텍스트 세팅
+                    setText("Start playingg"); // 버튼의 텍스트 세팅
                 }
                 mStartPlaying = !mStartPlaying; // 현재 재생 상태를 변경함.
             }
