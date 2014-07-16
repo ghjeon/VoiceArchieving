@@ -23,5 +23,12 @@
             android:layout_height="wrap_content"
             android:text="Start Playing"
             android:id="@+id/mPlayButton" android:layout_gravity="center"/>
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ID3 Tag Write"
+            android:id="@+id/btnID3Activity" android:layout_gravity="center"/>
+    <Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ID3 Tag Read"
+            android:id="@+id/btnID3ReadActivity" android:layout_gravity="center"/>
 </LinearLayout>
 

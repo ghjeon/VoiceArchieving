@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="제목"
+            android:id="@+id/textView" android:layout_gravity="left|center_vertical"/>
+    <EditText
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtTagTitle" android:layout_gravity="left|center_vertical"/>
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="대화 참여자"
+            android:id="@+id/textView1" android:layout_gravity="left|center_vertical" android:singleLine="true"/>
+    <EditText
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtTagComposer" android:layout_gravity="left|center_vertical"/>
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="녹음 일시"
+            android:id="@+id/textView2" android:layout_gravity="left|center_vertical"/>
+    <EditText android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@+id/txtTagDateTime"
+              android:layout_gravity="left|center_vertical"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="녹음 장소"
+              android:id="@+id/textView3" android:layout_gravity="left|center_vertical"/>
+    <EditText android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@+id/txtTagLocation"
+              android:layout_gravity="left|center_vertical"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="길이"
+              android:id="@+id/textView4" android:layout_gravity="left|center_vertical"/>
+    <EditText android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@+id/txtTagLength"
+              android:layout_gravity="left|center_vertical"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+              android:id="@+id/textView5" android:layout_gravity="left|center_vertical" android:text="카테고리"/>
+    <EditText android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@+id/txtTagCategory"
+              android:layout_gravity="left|center_vertical"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/textView6"
+              android:layout_gravity="left|center_vertical" android:text="태그"/>
+    <EditText android:layout_width="fill_parent" android:layout_height="wrap_content" android:id="@+id/txtTagTag"
+              android:layout_gravity="left|center_vertical"/>
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:text="저장"
+            android:id="@+id/btnSave" android:layout_gravity="right|center_vertical"/>
+</LinearLayout>

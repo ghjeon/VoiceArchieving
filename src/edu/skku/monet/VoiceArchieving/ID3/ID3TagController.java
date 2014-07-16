@@ -1,9 +1,5 @@
 package edu.skku.monet.VoiceArchieving.ID3;
 
-import org.jaudiotagger.audio.*;
-import org.jaudiotagger.tag.*;
-import org.jaudiotagger.tag.images.*;
-
 import java.io.*;
 import java.util.*;
 
@@ -29,233 +25,150 @@ import java.util.*;
 태그 - Content Group Description
 Favorite -Popularimeter
  */
+/*
 
 public class ID3TagController {
 
-    private File file = null;
-    private AudioFile f = null;
-    private Tag t = null;
+    private Mp3File mp3File = null;
+    private ID3v1 otag = null;
+    private ID3v2 tag = null;
+    private String srcPath = "";
+    private String srcName = "";
+    private String destPath = "";
 
     public ID3TagController(String path) throws Exception
     {
-        file = new File(path);
-        f = AudioFileIO.read(file);
-        t = f.getTag();
-        t.setEncoding("UTF-8");
+        String[] pathInfo = path.split("/");
+        String[] nameInfo = pathInfo[pathInfo.length - 1].split("\\.");
+        for(int i = 0; i < pathInfo.length - 1; i++)
+            srcPath += pathInfo[i] + "/";
+        for(int j = 0; j < nameInfo.length - 1; j++)
+            srcName += nameInfo[j];
+
+        destPath = srcPath + srcName + "_.mp3";
+
+        mp3File = new Mp3File(path);
+        otag = mp3File.getId3v1Tag();
+        tag = mp3File.getId3v2Tag();
+        if(tag == null)
+        {
+            ID3Wrapper newWarpper = new ID3Wrapper(new ID3v1Tag(), new ID3v24Tag());
+            mp3File.setId3v1Tag(newWarpper.getId3v1Tag());
+            mp3File.setId3v2Tag(newWarpper.getId3v2Tag());
+            mp3File.save(destPath);
+            tag = mp3File.getId3v2Tag();
+        }
+
     }
 
     public boolean setLocation(String location) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.COUNTRY);
-        if(field.isEmpty() == true)
-            t.createField(FieldKey.COUNTRY, location);
-        else
-            t.setField(FieldKey.COUNTRY, location);
-
-        AudioFileIO.write(f);
+        tag.setCopyright(location);
+        mp3File.save(destPath);
         return true;
     }
 
     public String getLocation() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.COUNTRY);
-        if(field.isEmpty() == false)
-            return field.toString();
-        else
-            return null;
+        return tag.getCopyright();
     }
 
     public boolean setDateTime(Integer datetime) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.YEAR);
-        if(field.isEmpty() == true)
-            t.createField(FieldKey.YEAR, datetime.toString());
-        else
-            t.setField(FieldKey.YEAR, datetime.toString());
-
-        AudioFileIO.write(f);
+        tag.setGenre(datetime);
         return true;
     }
 
     public Integer getDateTime() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.YEAR);
-        if(field.isEmpty() == true)
-            return Integer.getInteger(field.toString());
-        else
-            return 0;
+        return tag.getGenre();
     }
 
     public boolean setLength(Integer length) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.CUSTOM1);
-        if(field.isEmpty() == true)
-            t.createField(FieldKey.CUSTOM1, length.toString());
-        else
-            t.setField(FieldKey.CUSTOM1, length.toString());
-
-        AudioFileIO.write(f);
+        tag.setAlbum(length.toString());
         return true;
     }
 
     public Integer getLength() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.CUSTOM1);
-        if(field.isEmpty() == false)
-            return Integer.getInteger(field.toString());
-        else
-            return 0;
+        return Integer.getInteger(tag.getAlbum());
     }
 
-    public boolean setKeywords(List<String> keywords, Boolean overwrite) throws Exception
+    public boolean setKeywords(String keywords, Boolean overwrite) throws Exception
     {
-        Integer i = 0;
-        if(overwrite)
-            t.deleteField(FieldKey.LYRICS);
-
-        List<TagField> field = t.getFields(FieldKey.LYRICS);
-
-        if(field.isEmpty() == true)
-        {
-            t.createField(FieldKey.LYRICS, keywords.get(i));
-            i++;
-        }
-        for(; i < keywords.size(); i++)
-        {
-            t.addField(FieldKey.LYRICS, keywords.get(i));
-        }
-        AudioFileIO.write(f);
+        tag.setGenreDescription(keywords);
         return true;
     }
 
     public List<String> getKeywords() throws Exception
     {
-        List<String> keywords = Arrays.asList();
-        List<TagField> fields = t.getFields(FieldKey.LYRICS);
-        if(fields.isEmpty() == false)
-        {
-            for(Integer i = 0; i < fields.size(); i++)
-            {
-                keywords.add(fields.get(i).toString());
-            }
-        }
-
-        return keywords;
+        if(tag.getGenreDescription() != null)
+            return Arrays.asList(tag.getGenreDescription().split(","));
+        else
+            return null;
     }
 
     public boolean setKeywordCount(Integer count) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.TRACK);
-
-        if(field.isEmpty() == true)
-            t.createField(FieldKey.TRACK, count.toString());
-        else
-            t.setField(FieldKey.TRACK, count.toString());
-        AudioFileIO.write(f);
+        tag.setTrack(count.toString());
         return true;
     }
 
     public Integer getKeywordCount() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.TRACK);
-        if(field.isEmpty() == false)
-            return Integer.getInteger(t.getFirstField(FieldKey.TRACK).toString());
-        else
-            return 0;
+        return Integer.getInteger(tag.getTrack());
     }
 
-    public boolean setSpeakers(List<String> speakers, Boolean overwrite) throws Exception
+    public boolean setSpeakers(String speakers, Boolean overwrite) throws Exception
     {
-        Integer i = 0;
-        if(overwrite)
-            t.deleteField(FieldKey.LYRICIST);
-
-        List<TagField> fields = t.getFields(FieldKey.LYRICS);
-
-        if(fields.isEmpty() == true)
-        {
-            t.createField(FieldKey.LYRICIST, speakers.get(i));
-            i++;
-        }
-
-        for(; i < speakers.size(); i++)
-        {
-            t.addField(FieldKey.LYRICIST,speakers.get(i));
-        }
-
-        AudioFileIO.write(f);
+        tag.setComposer(speakers);
         return true;
     }
 
     public List<String> getSpeakers() throws Exception
     {
-        List<String> speakers = Arrays.asList();
-        List<TagField> fields = t.getFields(FieldKey.LYRICIST);
-        if(fields.isEmpty() == false)
-        {
-            for(Integer i = 0; i < fields.size(); i++)
-            {
-                speakers.add(fields.get(i).toString());
-            }
-        }
-
-        return speakers;
+        if(tag.getComposer() != null)
+            return Arrays.asList(tag.getComposer().toString().split(","));
+        else
+            return null;
     }
 
     public boolean setTitle(String title) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.TITLE);
-        if(field.isEmpty() == true)
-            t.createField(FieldKey.TITLE, title);
-        else
-            t.setField(FieldKey.TITLE, title);
-
-        AudioFileIO.write(f);
+        tag.setTitle(title);
         return true;
     }
 
     public String getTitle() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.TITLE);
-        if(field.isEmpty() == false)
-            return field.toString();
-        else
-            return null;
+        return tag.getTitle();
     }
 
     public boolean setComment(String comment) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.COMMENT);
-        if(field.isEmpty() == true)
-            t.addField(FieldKey.COMMENT, comment);
-        else
-            t.setField(FieldKey.COMMENT, comment);
-
-        AudioFileIO.write(f);
+        tag.setComment(comment);
         return true;
     }
 
     public String getComment() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.COMMENT);
-        if(field.isEmpty() == false)
-            return field.toString();
-        else
-            return null;
+        return tag.getComment();
     }
 
     public boolean setPicture(File imgFile) throws Exception
     {
+
         Artwork field = t.getFirstArtwork();
         if(field == null)
             t.createField(ArtworkFactory.createArtworkFromFile(imgFile));
         else
             field.setFromFile(imgFile);
-        AudioFileIO.write(f);
+        f.commit();
         return true;
     }
 
-    public Artwork getPicture() throws Exception
+    public void getPicture() throws Exception
     {
         if(t.getFirstArtwork() != null)
             return t.getFirstArtwork();
@@ -263,98 +176,46 @@ public class ID3TagController {
             return null;
     }
 
-    public boolean setCategories(List<String> categories, Boolean overwrite) throws Exception
+    public boolean setCategories(String categories, Boolean overwrite) throws Exception
     {
-        Integer i = 0;
-        if(overwrite)
-            t.deleteField(FieldKey.CUSTOM2);
-
-        if(t.getFields(FieldKey.CUSTOM2).isEmpty() == true)
-        {
-            t.createField(FieldKey.CUSTOM2, categories.get(i));
-            i++;
-        }
-
-        for(; i < categories.size(); i++)
-        {
-            t.addField(FieldKey.CUSTOM2, categories.get(i));
-        }
-
-        AudioFileIO.write(f);
+        tag.setPartOfSet(categories);
         return true;
     }
 
     public List<String> getCategories() throws Exception
     {
-        List<String> categories = Arrays.asList();
-        List<TagField> fields = t.getFields(FieldKey.CUSTOM2);
-
-        if(fields.isEmpty() == false)
-        {
-            for(Integer i = 0; i < fields.size(); i++)
-            {
-                categories.add(fields.get(i).toString());
-            }
-        }
-
-        return categories;
+        if(tag.getPartOfSet() != null)
+            return Arrays.asList(tag.getPartOfSet().split(","));
+        else
+            return null;
     }
 
-    public boolean setTags(List<String> tags, Boolean overwrite) throws Exception
+    public boolean setTags(String tags, Boolean overwrite) throws Exception
     {
-        Integer i = 0;
-        if(overwrite)
-            t.deleteField(FieldKey.CUSTOM3);
-
-        if(t.getFields(FieldKey.CUSTOM3).isEmpty() == true)
-        {
-            t.createField(FieldKey.CUSTOM3, tags.get(i));
-            i++;
-        }
-
-        for(; i < tags.size(); i++)
-        {
-            t.addField(FieldKey.CUSTOM3, tags.get(i));
-        }
-
-        AudioFileIO.write(f);
+        tag.setItunesComment(tags);
         return true;
     }
 
     public List<String> getTags() throws Exception
     {
-        List<String> tags = Arrays.asList();
-        List<TagField> fields = t.getFields(FieldKey.CUSTOM3);
-
-        if(fields.isEmpty() == false)
-        {
-            for(Integer i = 0; i < fields.size(); i++)
-            {
-                tags.add(fields.get(i).toString());
-            }
-        }
-
-        return tags;
+        if(tag.getItunesComment() != null)
+            return Arrays.asList(tag.getItunesComment().split(","));
+        else
+            return null;
     }
 
     public boolean setPopular(Integer popular) throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.CUSTOM4);
-        if(field.isEmpty() == true)
-            t.addField(FieldKey.CUSTOM4, popular.toString());
-        else
-            t.setField(FieldKey.CUSTOM4, popular.toString());
-
-        AudioFileIO.write(f);
+        tag.setPublisher(popular.toString());
         return true;
     }
 
     public Integer getPopular() throws Exception
     {
-        TagField field = t.getFirstField(FieldKey.CUSTOM4);
-        if(field.isEmpty() == false)
-            return Integer.getInteger(field.toString());
+        if(tag.getPublisher() != null)
+            return Integer.getInteger(tag.getPublisher());
         else
-            return null;
+            return 0;
     }
 }
+        */

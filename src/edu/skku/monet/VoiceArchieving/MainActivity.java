@@ -8,10 +8,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
-import android.widget.LinearLayout;
+import android.os.Message;
+import android.os.Handler;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -22,11 +22,23 @@ import android.media.MediaPlayer;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.Calendar;
-import java.io.IOException;
+import android.media.AudioFormat;
+
+import java.io.*;
+
+import com.uraroji.garage.android.mp3recvoice.RecMicToMp3;
 
 public class MainActivity extends Activity implements OnClickListener {
-    private final int GOOGLE_STT = 1000, MY_UI=1001;				//requestCode. 구글음성인식, 내가 만든 Activity
+
+    private RecMicToMp3 mRecMicToMp3 = null;
+
+    private final int FREQUENCY = 11025;
+    private final int CUSTOM_FREQ_SOAP = 1;
+    private final int OUT_FREQUENCY = FREQUENCY * CUSTOM_FREQ_SOAP;
+    private final int CHANNEL_CONTIGURATION = AudioFormat.CHANNEL_IN_STEREO;
+    private final int AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
+
+    private final int GOOGLE_STT = 1000, MY_UI=1001, ID3=1002;				//requestCode. 구글음성인식, 내가 만든 Activity
     private ArrayList<String> mResult;									//음성인식 결과 저장할 list
     private String mSelectedString;										//결과 list 중 사용자가 선택한 텍스트
     private TextView mResultTextView;									//최종 결과 출력하는 텍스트 뷰
@@ -34,6 +46,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private static final String LOG_TAG = "AudioRecordTest";
     private static String mFileName = null;
+    private static String mRFileName = null;
 
     private RecordButton mRecordButton = null;
     private MediaRecorder mRecorder = null;
@@ -79,11 +92,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private void startRecording() {
         /* 녹음 기능이 활성화 되었을때 */
+        /*
         mRecorder = new MediaRecorder();  // MediaRecord 객체 생성
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC); // 음성을 입력할 소스 선택.
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4); // 음성을 저장할 포맷 선택. DEFAULT = 3GP
         mRecorder.setOutputFile(mFileName); // Class 생성시에 Constructor 에서 지정한 mFileName 이용해 출력 파일 설정
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB); // 음성을 저장할 코텍 선택
+        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC); // 음성을 저장할 코텍 선택
 
         try {
             mRecorder.prepare(); // 레코더 초기화
@@ -92,13 +106,19 @@ public class MainActivity extends Activity implements OnClickListener {
         }
 
         mRecorder.start(); // 레코딩 시작
+        */
+        mRecMicToMp3.start();
     }
 
     private void stopRecording() {
         /* 녹음 기능이 비활성화 되었을때 */
+        /*
         mRecorder.stop(); //
+        mRecorder.reset();
         mRecorder.release();
         mRecorder = null;
+        */
+        mRecMicToMp3.stop();
     }
 
     class RecordButton extends Button {
@@ -153,7 +173,10 @@ public class MainActivity extends Activity implements OnClickListener {
 
     public MainActivity() {
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath(); // 실행중인 디바이스의 External Storage 경로를 절대경로로 확보
-        mFileName += getPackageName() +  "/" + Calendar.YEAR + Calendar.MONTH + Calendar.DATE + Calendar.HOUR + Calendar.SECOND + ".AMR";
+        mFileName = mFileName + getPackageName() +  "/test.mp3";
+        mRFileName = Environment.getExternalStorageDirectory().getAbsolutePath() + getPackageName() + "/test_.mp3";
+        mRecMicToMp3 = new RecMicToMp3(
+                mFileName, 8000);
         // 파일 이름 설정. External Storage Root 의 monet.VoiceArchieveing/{YEAR}{MONTH}{DATE}{HOUR}{SECOND}.mp4 형식으로 저장함
     }
 
@@ -184,11 +207,59 @@ public class MainActivity extends Activity implements OnClickListener {
         findViewById(R.id.mPlayButton).setOnClickListener(this);
         findViewById(R.id.mRecordButton).setOnClickListener(this);
         findViewById(R.id.show).setOnClickListener(this);
+        //findViewById(R.id.btnID3Activity).setOnClickListener(this);
+        //findViewById(R.id.btnID3ReadActivity).setOnClickListener(this);
         //setContentView(ll); // 어플리케이션 화면에 레이아웃 출력
+
+        mRecMicToMp3.setHandle(new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case RecMicToMp3.MSG_REC_STARTED:
+                        break;
+                    case RecMicToMp3.MSG_REC_STOPPED:
+                        break;
+                    case RecMicToMp3.MSG_ERROR_GET_MIN_BUFFERSIZE:
+                        Toast.makeText(MainActivity.this,
+                                "BUFFER_FAILED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    case RecMicToMp3.MSG_ERROR_CREATE_FILE:
+                        Toast.makeText(MainActivity.this, "WRITE_NOT_ALLOWED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    case RecMicToMp3.MSG_ERROR_REC_START:
+                        Toast.makeText(MainActivity.this, "REC_INIT_FAILED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    case RecMicToMp3.MSG_ERROR_AUDIO_RECORD:
+                        Toast.makeText(MainActivity.this, "REC_WORKING_FAILED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    case RecMicToMp3.MSG_ERROR_AUDIO_ENCODE:
+                        Toast.makeText(MainActivity.this, "AUDIO_ENCODE_FAILED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    case RecMicToMp3.MSG_ERROR_WRITE_FILE:
+
+                        Toast.makeText(MainActivity.this, "WRITE_FILE_FAILED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    case RecMicToMp3.MSG_ERROR_CLOSE_FILE:
+                        Toast.makeText(MainActivity.this, "FILE_CLOSE_FAILED",
+                                Toast.LENGTH_LONG).show();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+
+
     }
 
     @Override
-    public void onClick(View v) {
+    public void onClick (View v) {
         int view = v.getId();
         if(view == R.id.show){
             startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);			//내가 만든 activity 실행
@@ -201,6 +272,34 @@ public class MainActivity extends Activity implements OnClickListener {
         {
             mRecordButton.callOnClick();
         }
+        /*
+        else if(view == R.id.btnID3Activity)
+        {
+            Intent id3Intent = new Intent(this, TagControlActivity.class);
+            try
+            {
+                id3Intent.putExtra("ID3TagController", mFileName);
+                startActivityForResult(id3Intent, ID3);
+
+            } catch (Exception e)
+            {
+                e.getMessage();
+            }
+        }
+        else if(view == R.id.btnID3ReadActivity)
+        {
+            Intent id3Intent = new Intent(this, TagControlActivity.class);
+            try
+            {
+                id3Intent.putExtra("ID3TagController", mRFileName);
+                startActivityForResult(id3Intent, ID3);
+
+            } catch (Exception e)
+            {
+                e.getMessage();
+            }
+        }
+        */
     }
 
     @Override
