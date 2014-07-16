@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
         /* 녹음 기능이 활성화 되었을때 */
         mRecorder = new MediaRecorder();  // MediaRecord 객체 생성
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC); // 음성을 입력할 소스 선택.
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP); // 음성을 저장할 포맷 선택. DEFAULT = 3GP
+        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4); // 음성을 저장할 포맷 선택. DEFAULT = 3GP
         mRecorder.setOutputFile(mFileName); // Class 생성시에 Constructor 에서 지정한 mFileName 이용해 출력 파일 설정
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB); // 음성을 저장할 코텍 선택
 
@@ -138,7 +138,7 @@ public class MainActivity extends Activity {
 
     public MainActivity() {
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath(); // 실행중인 디바이스의 External Storage 경로를 절대경로로 확보
-        mFileName += getPackageName() +  "/" + Calendar.YEAR + Calendar.MONTH + Calendar.DATE + Calendar.HOUR + Calendar.SECOND + ".3GP";
+        mFileName += getPackageName() +  "/" + Calendar.YEAR + Calendar.MONTH + Calendar.DATE + Calendar.HOUR + Calendar.SECOND + ".AMR";
         // 파일 이름 설정. External Storage Root 의 monet.VoiceArchieveing/{YEAR}{MONTH}{DATE}{HOUR}{SECOND}.mp4 형식으로 저장함
     }
 
