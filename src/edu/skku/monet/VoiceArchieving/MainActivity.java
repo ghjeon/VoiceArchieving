@@ -12,6 +12,7 @@ import android.os.Message;
 import android.os.Handler;
 import android.os.Bundle;
 import android.os.Environment;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -25,6 +26,7 @@ import android.widget.Toast;
 import android.media.AudioFormat;
 
 import java.io.*;
+import java.util.Calendar;
 
 import com.uraroji.garage.android.mp3recvoice.RecMicToMp3;
 
@@ -172,12 +174,12 @@ public class MainActivity extends Activity implements OnClickListener {
     }
 
     public MainActivity() {
+        Calendar c = Calendar.getInstance();
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath(); // 실행중인 디바이스의 External Storage 경로를 절대경로로 확보
-        mFileName = mFileName + getPackageName() +  "/test.mp3";
-        mRFileName = Environment.getExternalStorageDirectory().getAbsolutePath() + getPackageName() + "/test_.mp3";
+        mFileName = mFileName + "edu.skku.VA/" + c.get(Calendar.YEAR) + c.get(Calendar.MONTH) + c.get(Calendar.DATE) + c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) + c.get(Calendar.MILLISECOND) + ".mp3";
         mRecMicToMp3 = new RecMicToMp3(
                 mFileName, 8000);
-        // 파일 이름 설정. External Storage Root 의 monet.VoiceArchieveing/{YEAR}{MONTH}{DATE}{HOUR}{SECOND}.mp4 형식으로 저장함
+        // 파일 이름 설정. External Storage Root 의 monet.VoiceArchieveing/{YEAR}{MONTH}{DATE}{HOUR}{MILLISECOND}.mp4 형식으로 저장함
     }
 
     @Override

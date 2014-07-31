@@ -1,7 +1,4 @@
-package edu.skku.monet.VoiceArchieving.ID3;
-
-import java.io.*;
-import java.util.*;
+package edu.skku.monet.VoiceArchieving.Archive;
 
 /**
  * Created with IntelliJ IDEA.
@@ -25,6 +22,9 @@ import java.util.*;
 태그 - Content Group Description
 Favorite -Popularimeter
  */
+
+
+
 /*
 
 public class ID3TagController {
