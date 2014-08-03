@@ -14,6 +14,7 @@ import android.widget.TextView;
  * User: Gyuhyeon
  * Date: 2014. 7. 16.
  * Time: 오후 11:38
+ //
  */
 public class TagControlActivity {
     /*
