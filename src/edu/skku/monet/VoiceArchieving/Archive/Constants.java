@@ -18,32 +18,33 @@ public class Constants {
     public static final String KEYWORD_DATABASE_NAME = "keyword";
 
     public static final String ARCHIVE_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_DATABASE_NAME +
-            " (id varchar(255) PRIMARY KEY, " +
-            "title varchar(255) NOT NULL, " +
-            "comment text, " +
-            "location varchar(255), " +
-            "keywordCount bigint DEFAULT 0, " +
-            "datetime bigint DEFAULT 0, " +
-            "popularity int DEFAULT 0);";
+            " (id TEXT PRIMARY KEY, " +
+            "title TEXT NOT NULL, " +
+            "comment TEXT, " +
+            "location TEXT, " +
+            "keywordCount INTEGER DEFAULT 0, " +
+            "datetime INTEGER DEFAULT 0, " +
+            "popularity INTEGER DEFAULT 0," +
+            "fileName TEXT NOT NULL);";
 
 
     public static final String ARCHIVE_KEYWORD_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_KEYWORD_DATABASE_NAME +
-            "(archive_id VARCHAR(255), " +
-            "keyword VARCHAR(255) NOT NULL, " +
-            "index bigint, " +
-            "PRIMARY KEY (archive_id, index));";
+            " (archive_id TEXT, " +
+            "keyword TEXT NOT NULL, " +
+            "locindex INTEGER, " +
+            "PRIMARY KEY (archive_id, locindex));";
 
     public static final String ARCHIVE_CATEGORY_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_CATEGORY_DATABASE_NAME +
-            "(archive_id VARCHAR(255), " +
-            "category_srl int(11), " +
+            " (archive_id TEXT, " +
+            "category_srl INTEGER, " +
             "PRIMARY KEY (archive_id, category_srl)); ";
 
     public static final String CATEGORY_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.CATEGORY_DATABASE_NAME +
-            "(srl int(11) PRIMARY KEY AUTOINCREMENT, " +
-            "category VARCHAR(255) NOT NULL UNIQUE);";
+            " (srl INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "category TEXT NOT NULL UNIQUE);";
 
-    public static final String KEYWORD_DB_CREATE_STATEMENTS = "CREATE TABLE" + Constants.KEYWORD_DATABASE_NAME +
-            "(srl int(11) PRIMARY KEY AUTOINCREMENT, " +
-            "keyword VARCHAR(255) NOT NULL UNIQUE);";
+    public static final String KEYWORD_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.KEYWORD_DATABASE_NAME +
+            " (srl INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "keyword TEXT NOT NULL UNIQUE);";
 
 }

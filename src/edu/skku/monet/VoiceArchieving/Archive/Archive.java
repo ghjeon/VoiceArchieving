@@ -28,6 +28,7 @@ public class Archive {
     long datetime;
     long length;
     int popularity;
+    String fileName;
 
     SQLiteDatabase db;
 
@@ -41,7 +42,7 @@ public class Archive {
 
     }
 
-    public Archive(String id, String title, String comment, String location, long keywordCount, long datetime, long length, int popularity) {
+    public Archive(String id, String title, String comment, String location, long keywordCount, long datetime, long length, int popularity, String fileName) {
         this.id = id;
         this.title = title;
         this.comment = comment;
@@ -50,6 +51,19 @@ public class Archive {
         this.datetime = datetime;
         this.length = length;
         this.popularity = popularity;
+        this.fileName = fileName;
+    }
+
+    public void Initialize(String id, String title, String comment, String location, long keywordCount, long datetime, long length, int popularity, String fileName) {
+        this.id = id;
+        this.title = title;
+        this.comment = comment;
+        this.location = location;
+        this.keywordCount = keywordCount;
+        this.datetime = datetime;
+        this.length = length;
+        this.popularity = popularity;
+        this.fileName = fileName;
     }
 
     public String getId() {
@@ -84,6 +98,10 @@ public class Archive {
         return this.popularity;
     }
 
+    public String getFileName() {
+        return this.fileName;
+    }
+
     public void set() {
 
         ContentValues c = new ContentValues();
@@ -96,6 +114,7 @@ public class Archive {
         c.put("datetime", this.datetime);
         c.put("length", this.length);
         c.put("popularity", this.popularity);
+        c.put("fileName", this.fileName);
 
         db.insert(Constants.ARCHIVE_DATABASE_NAME, null, c);
 
@@ -111,6 +130,7 @@ public class Archive {
         c.put("datetime", this.datetime);
         c.put("length", this.length);
         c.put("popularity", this.popularity);
+        c.put("fileName", this.fileName);
 
         db.update(Constants.ARCHIVE_DATABASE_NAME, c, "id = ? ", new String[] { this.id });
     }
@@ -118,6 +138,11 @@ public class Archive {
     public Archive findById(String id) {
         Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " WHERE " +
                                                                                 "id = '" + id + "';", null);
+        return buildObject(res);
+    }
+
+    public Archive findByFileName(String fileName) {
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + "WHERE fileName like '%" + fileName + "%';", null);
         return buildObject(res);
     }
 
@@ -179,7 +204,8 @@ public class Archive {
                 res.getInt(res.getColumnIndex("keywordCount")),
                 res.getLong(res.getColumnIndex("datetime")),
                 res.getLong(res.getColumnIndex("length")),
-                res.getInt(res.getColumnIndex("popularity")));
+                res.getInt(res.getColumnIndex("popularity")),
+                res.getString(res.getColumnIndex("fileName")));
 
         return result;
     }

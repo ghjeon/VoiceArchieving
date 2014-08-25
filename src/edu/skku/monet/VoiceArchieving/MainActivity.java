@@ -29,6 +29,7 @@ import java.io.*;
 import java.util.Calendar;
 
 import com.uraroji.garage.android.mp3recvoice.RecMicToMp3;
+import edu.skku.monet.VoiceArchieving.Archive.*;
 
 public class MainActivity extends Activity implements OnClickListener {
 
@@ -49,6 +50,8 @@ public class MainActivity extends Activity implements OnClickListener {
 
 
     private static final String LOG_TAG = "AudioRecordTest";
+    private static String mShortFileName = null;
+    private static String mRShortFileName = null;
     private static String mFileName = null;
     private static String mRFileName = null;
 
@@ -125,6 +128,13 @@ public class MainActivity extends Activity implements OnClickListener {
         mRecorder = null;
         */
         mRecMicToMp3.stop();
+        mRFileName = mFileName;
+        mFileName = "";
+        mRShortFileName = mShortFileName;
+        mShortFileName = "";
+        Archive dbObject = new Archive(this.getApplicationContext());
+        dbObject.Initialize(null, mRShortFileName, "", "", 0, System.currentTimeMillis() / 1000, 0, 0, mRFileName);
+        dbObject.set();
     }
 
     class RecordButton extends Button {
@@ -180,7 +190,15 @@ public class MainActivity extends Activity implements OnClickListener {
     public MainActivity() {
         Calendar c = Calendar.getInstance();
         mFileName = Environment.getExternalStorageDirectory().getAbsolutePath(); // 실행중인 디바이스의 External Storage 경로를 절대경로로 확보
-        mFileName = mFileName + "edu.skku.VA/" + c.get(Calendar.YEAR) + c.get(Calendar.MONTH) + c.get(Calendar.DATE) + c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) + c.get(Calendar.MILLISECOND) + ".mp3";
+        Log.e("VA", mFileName);
+        mFileName = mFileName + "/edu.skku.VA/";
+        Log.e("VA", mFileName);
+        File dir = new File(mFileName);
+// have the object build the directory structure, if needed.
+        dir.mkdirs();
+        mShortFileName = "" + c.get(Calendar.YEAR) + (c.get(Calendar.MONTH)+1) + c.get(Calendar.DATE) + c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) + c.get(Calendar.MILLISECOND);
+        mFileName = mFileName + mShortFileName + ".mp3";
+        Log.e("VA", mFileName);
         mRecMicToMp3 = new RecMicToMp3(
                 mFileName, 8000);
         // 파일 이름 설정. External Storage Root 의 monet.VoiceArchieveing/{YEAR}{MONTH}{DATE}{HOUR}{MILLISECOND}.mp4 형식으로 저장함
