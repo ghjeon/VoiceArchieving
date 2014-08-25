@@ -34,10 +34,12 @@ public class DBHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         // TODO Auto-generated method stub
-        db.execSQL(
-                "create table contacts " +
-                        "(id integer primary key, name text,phone text,email text, street text,place text)"
-        );
+        db.execSQL(Constants.CATEGORY_DB_CREATE_STATEMENTS);
+        db.execSQL(Constants.KEYWORD_DB_CREATE_STATEMENTS);
+        db.execSQL(Constants.ARCHIVE_DB_CREATE_STATEMENTS);
+        db.execSQL(Constants.ARCHIVE_CATEGORY_DB_CREATE_STATEMENTS);
+        db.execSQL(Constants.ARCHIVE_KEYWORD_DB_CREATE_STATEMENTS);
+
     }
 
     @Override
@@ -47,20 +49,10 @@ public class DBHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public boolean insertContact  (String name, String phone, String email, String street,String place)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-
-        contentValues.put("name", name);
-        contentValues.put("phone", phone);
-        contentValues.put("email", email);
-        contentValues.put("street", street);
-        contentValues.put("place", place);
-
-        db.insert("contacts", null, contentValues);
-        return true;
+    public SQLiteDatabase getDbObject() {
+        return this.getWritableDatabase();
     }
+
     public Cursor getData(String table, int id){
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor res =  db.rawQuery( "SELECT * FROM" + table + " WHERE " + "" +" id="+id+"", null );
@@ -71,6 +63,7 @@ public class DBHelper extends SQLiteOpenHelper {
         int numRows = (int) DatabaseUtils.queryNumEntries(db, table);
         return numRows;
     }
+
     public boolean updateContact (Integer id, String name, String phone, String email, String street,String place)
     {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -84,19 +77,12 @@ public class DBHelper extends SQLiteOpenHelper {
         return true;
     }
 
-    public Integer deleteContact (Integer id)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        return db.delete("contacts",
-                "id = ? ",
-                new String[] { Integer.toString(id) });
-    }
-    public ArrayList getAllCotacts(String table)
+    public ArrayList findAll(String table)
     {
         ArrayList array_list = new ArrayList();
         //hp = new HashMap();
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor res =  db.rawQuery( "select * from contacts", null );
+        Cursor res =  db.rawQuery( "SELECT * FROM " + table + ";", null);
         res.moveToFirst();
         while(res.isAfterLast() == false){
             array_list.add(res.getString(res.getColumnIndex(table)));

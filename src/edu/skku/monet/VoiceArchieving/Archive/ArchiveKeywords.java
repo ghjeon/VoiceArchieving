@@ -9,6 +9,6 @@ package edu.skku.monet.VoiceArchieving.Archive;
  */
 public class ArchiveKeywords {
     String archive_id;
-    String keyword;
+    int keyword;
     long index;
 }

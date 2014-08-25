@@ -8,5 +8,6 @@ package edu.skku.monet.VoiceArchieving.Archive;
  * To change this template use File | Settings | File Templates.
  */
 public class Category {
-    String name;
+    int srl;
+    String category;
 }
