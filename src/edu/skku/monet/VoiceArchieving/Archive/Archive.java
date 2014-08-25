@@ -1,9 +1,13 @@
 package edu.skku.monet.VoiceArchieving.Archive;
 
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -16,15 +20,6 @@ import java.util.List;
 
 public class Archive {
 
-    private static final String CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_DATABASE_NAME + " (id varchar(255) PRIMARY KEY, " +
-                                                                                                          "title varchar(255) NOT NULL, " +
-                                                                                                          "comment text, " +
-                                                                                                          "location varchar(255), " +
-                                                                                                          "keywordCount bigint DEFAULT 0, " +
-                                                                                                          "datetime bigint DEFAULT 0, " +
-                                                                                                          "popularity int DEFAULT 0";
-
-
     String id;
     String title;
     String comment;
@@ -36,9 +31,13 @@ public class Archive {
 
     SQLiteDatabase db;
 
+    DBHelper dbHelper;
 
-    public Archive(){
 
+    public Archive(Context context){
+
+        dbHelper = new DBHelper(context);
+        db = dbHelper.getDbObject();
 
     }
 
@@ -61,7 +60,7 @@ public class Archive {
         return this.title;
     }
 
-    public String getCOmment() {
+    public String getComment() {
         return this.comment;
     }
 
@@ -85,33 +84,104 @@ public class Archive {
         return this.popularity;
     }
 
-    public void set(Archive archive) {
+    public void set() {
 
+        ContentValues c = new ContentValues();
+
+        c.put("id", "");
+        c.put("title", this.title);
+        c.put("comment", this.comment);
+        c.put("location", this.location);
+        c.put("keywordCount", this.keywordCount);
+        c.put("datetime", this.datetime);
+        c.put("length", this.length);
+        c.put("popularity", this.popularity);
+
+        db.insert(Constants.ARCHIVE_DATABASE_NAME, null, c);
+
+    }
+
+    public void update() {
+        ContentValues c = new ContentValues();
+
+        c.put("title", this.title);
+        c.put("comment", this.comment);
+        c.put("location", this.location);
+        c.put("keywordCount", this.keywordCount);
+        c.put("datetime", this.datetime);
+        c.put("length", this.length);
+        c.put("popularity", this.popularity);
+
+        db.update(Constants.ARCHIVE_DATABASE_NAME, c, "id = ? ", new String[] { this.id });
     }
 
     public Archive findById(String id) {
-        return this;
-
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " WHERE " +
+                                                                                "id = '" + id + "';", null);
+        return buildObject(res);
     }
 
-    public List<Archive> findByKeyword(String keyword) {
-                    return null;
+    public List<Archive> findByKeyword(int keyword) {
+        Cursor res = db.rawQuery("SELECT DISTINCT * FROM " +
+                Constants.ARCHIVE_KEYWORD_DATABASE_NAME +
+                " AS K INNER JOIN " +
+                Constants.ARCHIVE_DATABASE_NAME +
+                " AS A ON K.archive_id = A.id WHERE " +
+                "keyword = " + keyword + ";", null);
+        res.moveToFirst();
+        List<Archive> list = new ArrayList<Archive>();
+        while(res.isAfterLast() == false)
+        {
+            list.add(buildObject(res));
+        }
+        return list;
     }
 
     public List<Archive> findBy(int index, int count) {
-                                return null;
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " LIMIT " + (index-1)*count + ", " + count + ";", null);
+
+        res.moveToFirst();
+        List<Archive> list = new ArrayList<Archive>();
+        while(res.isAfterLast() == false)
+        {
+            list.add(buildObject(res));
+        }
+        return list;
     }
 
-    public List<Archive> findByCategory(String category) {
-                                            return null;
-    }
-
-    public Archive update(Archive archive) {
-                                                        return null;
+    public List<Archive> findByCategory(int category) {
+        Cursor res = db.rawQuery("SELECT DISTINCT * FROM " +
+                Constants.ARCHIVE_CATEGORY_DATABASE_NAME +
+                " AS C INNER JOIN " +
+                Constants.ARCHIVE_DATABASE_NAME +
+                " AS A ON C.archive_id = A.id WHERE " +
+                "category = " + category + ";", null);
+        res.moveToFirst();
+        List<Archive> list = new ArrayList<Archive>();
+        while(res.isAfterLast() == false)
+        {
+            list.add(buildObject(res));
+        }
+        return list;
     }
 
     public void delete(String id) {
 
+    }
+
+    private Archive buildObject(Cursor res)
+    {
+        Archive result = new Archive(
+                res.getString(res.getColumnIndex("id")),
+                res.getString(res.getColumnIndex("title")),
+                res.getString(res.getColumnIndex("comment")),
+                res.getString(res.getColumnIndex("location")),
+                res.getInt(res.getColumnIndex("keywordCount")),
+                res.getLong(res.getColumnIndex("datetime")),
+                res.getLong(res.getColumnIndex("length")),
+                res.getInt(res.getColumnIndex("popularity")));
+
+        return result;
     }
 
 
