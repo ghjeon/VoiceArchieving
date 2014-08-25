@@ -42,6 +42,8 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private final int GOOGLE_STT = 1000, MY_UI=1001, ID3=1002;				//requestCode. 구글음성인식, 내가 만든 Activity
     private ArrayList<String> mResult;									//음성인식 결과 저장할 list
+    private ArrayList<String> totalResult;
+    String finalResult = "";
     private String mSelectedString;										//결과 list 중 사용자가 선택한 텍스트
     private TextView mResultTextView;									//최종 결과 출력하는 텍스트 뷰
 
@@ -55,6 +57,8 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private PlayButton   mPlayButton = null;
     private MediaPlayer   mPlayer = null;
+
+
 
     private void onRecord(boolean start) {
         /* 녹음 버튼에 대한 onClick Event Process func */
@@ -191,6 +195,7 @@ public class MainActivity extends Activity implements OnClickListener {
         setContentView(R.layout.main);
 
 
+
         /*
         LinearLayout ll = new LinearLayout(this); // 레이아웃 종류 선택
         mRecordButton = new RecordButton(this);  // 레코드 버튼 객체 생성
@@ -321,12 +326,38 @@ public class MainActivity extends Activity implements OnClickListener {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
+
         if( resultCode == RESULT_OK  && (requestCode == GOOGLE_STT || requestCode == MY_UI) ){		//결과가 있으면
-            showSelectDialog(requestCode, data);				//결과를 다이얼로그로 출력.
+
+            TextView resultview = (TextView)findViewById(R.id.resulttext);
+
+
+            Log.d("Tag", "print result");
+            String key = "";
+            if(requestCode == GOOGLE_STT)					//구글음성인식이면
+                key = RecognizerIntent.EXTRA_RESULTS;	//키값 설정
+            else if(requestCode == MY_UI)					//내가 만든 activity 이면
+                key = SpeechRecognizer.RESULTS_RECOGNITION;	//키값 설정
+
+            mResult = data.getStringArrayListExtra(key);		//인식된 데이터 list 받아옴.
+            String[] result = new String[mResult.size()];			//배열생성. 다이얼로그에서 출력하기 위해
+            mResult.toArray(result);									//	list 배열로 변환
+
+            Log.d("Tag", result[0]);
+            //totalResult.add(result[0]);
+
+            finalResult += result[0];
+            finalResult += "\n";
+
+            resultview.setText(result[0]);
+
+            startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);
+            //showSelectDialog(requestCode, data);				//결과를 다이얼로그로 출력.
         }
         else{															//결과가 없으면 에러 메시지 출력
             String msg = null;
 
+            TextView resultview = (TextView)findViewById(R.id.resulttext);
             //내가 만든 activity에서 넘어오는 오류 코드를 분류
             switch(resultCode){
                 case SpeechRecognizer.ERROR_AUDIO:
@@ -344,6 +375,17 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case SpeechRecognizer.ERROR_NO_MATCH:
                     msg = "일치하는 항목이 없습니다.";
+                    Log.i("tag","last");
+
+
+
+
+                    /*
+                    for(int i = 0; totalResult.get(i)!=null ; i++) {
+                        finalResult += totalResult.get(i);
+                    }
+*/
+                    resultview.setText(finalResult);
                     break;
                 case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                     msg = "음성인식 서비스가 과부하 되었습니다.";
@@ -353,6 +395,9 @@ public class MainActivity extends Activity implements OnClickListener {
                     break;
                 case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
                     msg = "입력이 없습니다.";
+
+
+                    resultview.setText(finalResult);
                     break;
             }
 
