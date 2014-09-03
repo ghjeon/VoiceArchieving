@@ -8,7 +8,7 @@ package edu.skku.monet.VoiceArchieving.Archive;
  * Time: 오전 2:13
  */
 public class Constants {
-    public static final int DATABASE_VERSION = 3;
+    public static final int DATABASE_VERSION = 4;
 
     public static final String DATABASE_NAME = "VA";
     public static final String ARCHIVE_DATABASE_NAME = "archive";
@@ -23,6 +23,7 @@ public class Constants {
             "comment TEXT, " +
             "location TEXT, " +
             "keywordCount INTEGER DEFAULT 0, " +
+            "length INTEGER DEFAULT 0," +
             "datetime INTEGER DEFAULT 0, " +
             "popularity INTEGER DEFAULT 0," +
             "fileName TEXT NOT NULL);";

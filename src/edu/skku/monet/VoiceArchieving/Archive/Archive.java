@@ -28,7 +28,7 @@ public class Archive {
     long datetime;
     long length;
     int popularity;
-    String fileName;
+    public static String fileName;
 
     SQLiteDatabase db;
 
@@ -40,6 +40,11 @@ public class Archive {
         dbHelper = new DBHelper(context);
         db = dbHelper.getDbObject();
 
+    }
+
+    public void getConnection(Context context) {
+        dbHelper = new DBHelper(context);
+        db = dbHelper.getDbObject();
     }
 
     public Archive(String id, String title, String comment, String location, long keywordCount, long datetime, long length, int popularity, String fileName) {
@@ -94,7 +99,7 @@ public class Archive {
         return this.length;
     }
 
-    public long getPopularity() {
+    public int getPopularity() {
         return this.popularity;
     }
 
@@ -106,7 +111,6 @@ public class Archive {
 
         ContentValues c = new ContentValues();
 
-        c.put("id", "");
         c.put("title", this.title);
         c.put("comment", this.comment);
         c.put("location", this.location);
@@ -116,13 +120,15 @@ public class Archive {
         c.put("popularity", this.popularity);
         c.put("fileName", this.fileName);
 
-        db.insert(Constants.ARCHIVE_DATABASE_NAME, null, c);
+        Long result = db.insert(Constants.ARCHIVE_DATABASE_NAME, null, c);
+        ;
 
     }
 
     public void update() {
         ContentValues c = new ContentValues();
 
+        c.put("id", this.id);
         c.put("title", this.title);
         c.put("comment", this.comment);
         c.put("location", this.location);
@@ -142,7 +148,8 @@ public class Archive {
     }
 
     public Archive findByFileName(String fileName) {
-        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + "WHERE fileName like '%" + fileName + "%';", null);
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " WHERE fileName like '%" + fileName + "%';", null);
+        res.moveToFirst();
         return buildObject(res);
     }
 
@@ -163,15 +170,22 @@ public class Archive {
     }
 
     public List<Archive> findBy(int index, int count) {
-        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " LIMIT " + (index-1)*count + ", " + count + ";", null);
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " LIMIT " + count + " OFFSET " + (index-1)*count + ";", null);
 
         res.moveToFirst();
         List<Archive> list = new ArrayList<Archive>();
         while(res.isAfterLast() == false)
         {
             list.add(buildObject(res));
+            res.moveToNext();
         }
         return list;
+    }
+
+    public Cursor findByWithCursor(int index, int count) {
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " LIMIT " + count + " OFFSET " + (index-1)*count + ";", null);
+
+        return res;
     }
 
     public List<Archive> findByCategory(int category) {

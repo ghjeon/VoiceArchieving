@@ -41,7 +41,7 @@ public class MainActivity extends Activity implements OnClickListener {
     private final int CHANNEL_CONTIGURATION = AudioFormat.CHANNEL_IN_STEREO;
     private final int AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
 
-    private final int GOOGLE_STT = 1000, MY_UI=1001, ID3=1002;				//requestCode. 구글음성인식, 내가 만든 Activity
+    private final int GOOGLE_STT = 1000, MY_UI=1001, ID3=1002, FILELIST=1003;				//requestCode. 구글음성인식, 내가 만든 Activity
     private ArrayList<String> mResult;									//음성인식 결과 저장할 list
     private ArrayList<String> totalResult;
     String finalResult = "";
@@ -232,8 +232,8 @@ public class MainActivity extends Activity implements OnClickListener {
         findViewById(R.id.mPlayButton).setOnClickListener(this);
         findViewById(R.id.mRecordButton).setOnClickListener(this);
         findViewById(R.id.show).setOnClickListener(this);
-        //findViewById(R.id.btnID3Activity).setOnClickListener(this);
-        //findViewById(R.id.btnID3ReadActivity).setOnClickListener(this);
+        findViewById(R.id.btnID3Activity).setOnClickListener(this);
+        findViewById(R.id.btnID3ReadActivity).setOnClickListener(this);
         //setContentView(ll); // 어플리케이션 화면에 레이아웃 출력
 
         mRecMicToMp3.setHandle(new Handler() {
@@ -297,26 +297,26 @@ public class MainActivity extends Activity implements OnClickListener {
         {
             mRecordButton.callOnClick();
         }
-        /*
         else if(view == R.id.btnID3Activity)
         {
-            Intent id3Intent = new Intent(this, TagControlActivity.class);
+            Intent id3Intent = new Intent(this, FileListActivity.class);
             try
             {
-                id3Intent.putExtra("ID3TagController", mFileName);
-                startActivityForResult(id3Intent, ID3);
+                //id3Intent.putExtra("ID3TagController", mFileName);
+                startActivityForResult(id3Intent, FILELIST);
 
             } catch (Exception e)
             {
                 e.getMessage();
             }
         }
+
         else if(view == R.id.btnID3ReadActivity)
         {
             Intent id3Intent = new Intent(this, TagControlActivity.class);
             try
             {
-                id3Intent.putExtra("ID3TagController", mRFileName);
+                id3Intent.putExtra("fileName", this.mRShortFileName);
                 startActivityForResult(id3Intent, ID3);
 
             } catch (Exception e)
@@ -324,7 +324,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 e.getMessage();
             }
         }
-        */
+
     }
 
     @Override

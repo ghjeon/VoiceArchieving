@@ -1,12 +1,18 @@
 package edu.skku.monet.VoiceArchieving;
 
-import java.util.*;
-
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import edu.skku.monet.VoiceArchieving.Archive.*;
 
 /**
  * Project IntelliJ IDEA
@@ -16,11 +22,12 @@ import android.widget.TextView;
  * Time: 오후 11:38
  ///
  */
-public class TagControlActivity {
-    /*
+public class TagControlActivity extends Activity implements OnClickListener {
 
-    public ID3TagController TagController = null;
+    Archive archive = null;
 
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.id3tagui);
@@ -28,14 +35,15 @@ public class TagControlActivity {
 
         try
         {
-            TagController = new ID3TagController(getIntent().getStringExtra("ID3TagController"));
-            ((TextView)findViewById(R.id.txtTagCategory)).setText(this.TagController.getCategories().toString());
-            ((TextView)findViewById(R.id.txtTagComposer)).setText(this.TagController.getSpeakers().toString());
-            ((TextView)findViewById(R.id.txtTagDateTime)).setText(this.TagController.getDateTime().toString());
-            ((TextView)findViewById(R.id.txtTagLength)).setText(this.TagController.getLength().toString());
-            ((TextView)findViewById(R.id.txtTagLocation)).setText(this.TagController.getLocation());
-            ((TextView)findViewById(R.id.txtTagTag)).setText(this.TagController.getTags().toString());
-            ((TextView)findViewById(R.id.txtTagTitle)).setText(this.TagController.getTitle());
+            Archive dbController = new Archive(this.getApplicationContext());
+            archive = dbController.findByFileName(getIntent().getStringExtra("fileName"));
+            ((TextView)findViewById(R.id.txtTagCategory)).setText("");
+            ((TextView)findViewById(R.id.txtTagComposer)).setText("");
+            ((TextView)findViewById(R.id.txtTagDateTime)).setText(Long.toString(this.archive.getDatetime()));
+            ((TextView)findViewById(R.id.txtTagLength)).setText(Long.toString(this.archive.getLength()));
+            ((TextView)findViewById(R.id.txtTagLocation)).setText(this.archive.getLocation());
+            ((TextView)findViewById(R.id.txtTagTag)).setText("");
+            ((TextView)findViewById(R.id.txtTagTitle)).setText(this.archive.getTitle());
         } catch (Exception e) {
             e.getMessage();
         }
@@ -48,17 +56,12 @@ public class TagControlActivity {
         if(view == R.id.btnSave) {
             try
             {
-              this.TagController.setCategories(((TextView)findViewById(R.id.txtTagCategory)).getText().toString(), true);
-              this.TagController.setSpeakers(((TextView)findViewById(R.id.txtTagComposer)).getText().toString(), true);
-              //this.TagController.setDateTime(Integer.getInteger(((TextView)findViewById(R.id.txtTagDateTime)).getText().toString()));
-              //this.TagController.setLength(Integer.getInteger(((TextView)findViewById(R.id.txtTagLength)).getText().toString()));
-              //this.TagController.setLocation(((TextView)findViewById(R.id.txtTagLocation)).getText().toString());
-              //this.TagController.setTags(((TextView)findViewById(R.id.txtTagTag)).getText().toString(), true);
-              //this.TagController.setTitle(((TextView)findViewById(R.id.txtTagTitle)).getText().toString());
+              this.archive.getConnection(this.getApplicationContext());
+              this.archive.Initialize(this.archive.getId(), ((TextView)findViewById(R.id.txtTagTitle)).getText().toString(), this.archive.getComment(), this.archive.getLocation(), this.archive.getKeywordCount(), this.archive.getDatetime(), this.archive.getLength(), this.archive.getPopularity(), this.archive.getFileName());
+              this.archive.update();
             } catch (Exception e) {
                 e.getMessage();
             }
         }
     }
-    */
 }
