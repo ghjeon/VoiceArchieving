@@ -45,6 +45,11 @@ public class ArchiveCategories {
         return this.category;
     }
 
+    public void Initialize(String archive_id, int category) {
+        this.archive_id = archive_id;
+        this.category = category;
+    }
+
     public void set() {
 
         ContentValues c = new ContentValues();
@@ -62,12 +67,13 @@ public class ArchiveCategories {
         c.put("archive_id", this.archive_id);
         c.put("category", this.category);
 
-        db.update(Constants.ARCHIVE_DATABASE_NAME, c, "archive_id = ? AND category = ? ", new String[] { this.archive_id, Integer.toString(this.category) });
+        db.update(Constants.ARCHIVE_CATEGORY_DATABASE_NAME, c, "archive_id = ? AND category = ? ", new String[] { this.archive_id, Integer.toString(this.category) });
     }
 
     public ArchiveCategories findByArchive(String id) {
         Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_CATEGORY_DATABASE_NAME + " WHERE " +
                 "archive_id= '" + id + "';", null);
+        res.moveToFirst();
         return buildObject(res);
     }
 
@@ -81,18 +87,20 @@ public class ArchiveCategories {
         while(res.isAfterLast() == false)
         {
             list.add(buildObject(res));
+            res.moveToNext();
         }
         return list;
     }
 
     public List<ArchiveCategories> findBy(int index, int count) {
-        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " LIMIT " + (index-1)*count + ", " + count + ";", null);
+        Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_CATEGORY_DATABASE_NAME + " LIMIT " + (index-1)*count + ", " + count + ";", null);
 
         res.moveToFirst();
         List<ArchiveCategories> list = new ArrayList<ArchiveCategories>();
         while(res.isAfterLast() == false)
         {
             list.add(buildObject(res));
+            res.moveToNext();
         }
         return list;
     }

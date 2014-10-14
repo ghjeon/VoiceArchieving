@@ -32,8 +32,8 @@ public class Constants {
     public static final String ARCHIVE_KEYWORD_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_KEYWORD_DATABASE_NAME +
             " (archive_id TEXT, " +
             "keyword TEXT NOT NULL, " +
-            "locindex INTEGER, " +
-            "PRIMARY KEY (archive_id, locindex));";
+            "time INTEGER, " +
+            "PRIMARY KEY (archive_id, time));";
 
     public static final String ARCHIVE_CATEGORY_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_CATEGORY_DATABASE_NAME +
             " (archive_id TEXT, " +

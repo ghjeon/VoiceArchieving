@@ -143,7 +143,8 @@ public class Archive {
 
     public Archive findById(String id) {
         Cursor res = db.rawQuery("SELECT * FROM " + Constants.ARCHIVE_DATABASE_NAME + " WHERE " +
-                                                                                "id = '" + id + "';", null);
+                "id = '" + id + "';", null);
+        res.moveToFirst();
         return buildObject(res);
     }
 
@@ -165,6 +166,7 @@ public class Archive {
         while(res.isAfterLast() == false)
         {
             list.add(buildObject(res));
+            res.moveToNext();
         }
         return list;
     }
@@ -200,6 +202,7 @@ public class Archive {
         while(res.isAfterLast() == false)
         {
             list.add(buildObject(res));
+            res.moveToNext();
         }
         return list;
     }

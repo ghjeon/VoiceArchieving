@@ -3,7 +3,7 @@
               android:orientation="vertical"
               android:layout_width="fill_parent"
               android:layout_height="fill_parent"
-    android:weightSum="1">
+              android:weightSum="1">
     <TextView
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
@@ -28,15 +28,19 @@
             android:layout_height="wrap_content"
             android:text="Show Archives"
             android:id="@+id/btnID3Activity" android:layout_gravity="center"/>
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Show Keywords"
+            android:id="@+id/btnKeywordActivity" android:layout_gravity="center"/>
     <Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ID3 Tag Read"
             android:id="@+id/btnID3ReadActivity" android:layout_gravity="center"/>
 
     <TextView
-        android:layout_width="252dp"
-        android:layout_height="match_parent"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:id="@+id/resulttext"
-        android:layout_gravity="center_horizontal" />
-
+            android:layout_width="212dp"
+            android:layout_height="93dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:id="@+id/resulttext"
+            android:layout_gravity="center_horizontal" />
 </LinearLayout>
 

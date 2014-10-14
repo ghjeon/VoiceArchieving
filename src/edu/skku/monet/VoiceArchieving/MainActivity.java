@@ -27,19 +27,24 @@ import android.media.AudioFormat;
 
 import java.io.*;
 import java.util.Calendar;
+import java.util.List;
 
 import com.uraroji.garage.android.mp3recvoice.RecMicToMp3;
 import edu.skku.monet.VoiceArchieving.Archive.*;
+import com.loopj.android.http.*;
+import org.apache.http.Header;
 
 public class MainActivity extends Activity implements OnClickListener {
 
     private RecMicToMp3 mRecMicToMp3 = null;
-
+    AsyncHttpClient client = new AsyncHttpClient();
     private final int FREQUENCY = 11025;
     private final int CUSTOM_FREQ_SOAP = 1;
     private final int OUT_FREQUENCY = FREQUENCY * CUSTOM_FREQ_SOAP;
     private final int CHANNEL_CONTIGURATION = AudioFormat.CHANNEL_IN_STEREO;
     private final int AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
+
+    private List<String> keywords = new ArrayList<String>();
 
     private final int GOOGLE_STT = 1000, MY_UI=1001, ID3=1002, FILELIST=1003;				//requestCode. 구글음성인식, 내가 만든 Activity
     private ArrayList<String> mResult;									//음성인식 결과 저장할 list
@@ -60,6 +65,10 @@ public class MainActivity extends Activity implements OnClickListener {
 
     private PlayButton   mPlayButton = null;
     private MediaPlayer   mPlayer = null;
+
+    //flag - > 음성인식 api 가 첫번째 실행인지 아닌지 flag 가 false면 아직 실행안한거
+    private boolean rec_flag = false;
+    //RecAsyncTask mRecAsyncTask = null;
 
 
 
@@ -133,8 +142,23 @@ public class MainActivity extends Activity implements OnClickListener {
         mRShortFileName = mShortFileName;
         mShortFileName = "";
         Archive dbObject = new Archive(this.getApplicationContext());
+        Keyword kdbObject = new Keyword(this.getApplicationContext());
+        ArchiveKeywords akdbObject = new ArchiveKeywords(this.getApplicationContext());
         dbObject.Initialize(null, mRShortFileName, "", "", 0, System.currentTimeMillis() / 1000, 0, 0, mRFileName);
         dbObject.set();
+        String archiveId = dbObject.findByFileName(mRShortFileName).getId();
+        for(int i = 0; i < keywords.size(); i++)
+        {
+            Keyword fetchResult = kdbObject.findByKeyword(keywords.get(i));
+            if(fetchResult == null)
+            {
+                kdbObject.Initialize(0, keywords.get(i));
+                kdbObject.set();
+                fetchResult = kdbObject.findByKeyword(keywords.get(i));
+            }
+            akdbObject.Initialize(archiveId, fetchResult.getId(), 0);
+            akdbObject.set();
+        }
     }
 
     class RecordButton extends Button {
@@ -210,6 +234,7 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onCreate(icicle);
         mRecordButton = new RecordButton(this);
         mPlayButton = new PlayButton(this);
+
         setContentView(R.layout.main);
 
 
@@ -287,6 +312,7 @@ public class MainActivity extends Activity implements OnClickListener {
     public void onClick (View v) {
         int view = v.getId();
         if(view == R.id.show){
+
             startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);			//내가 만든 activity 실행
         }
         else if(view == R.id.mPlayButton)
@@ -300,6 +326,19 @@ public class MainActivity extends Activity implements OnClickListener {
         else if(view == R.id.btnID3Activity)
         {
             Intent id3Intent = new Intent(this, FileListActivity.class);
+            try
+            {
+                //id3Intent.putExtra("ID3TagController", mFileName);
+                startActivityForResult(id3Intent, FILELIST);
+
+            } catch (Exception e)
+            {
+                e.getMessage();
+            }
+        }
+        else if(view == R.id.btnKeywordActivity)
+        {
+            Intent id3Intent = new Intent(this, KeywordListActivity.class);
             try
             {
                 //id3Intent.putExtra("ID3TagController", mFileName);
@@ -333,7 +372,7 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onPause();
         if (mRecorder != null) {
             mRecorder.release();
-           mRecorder = null;
+            mRecorder = null;
         }
 
         if (mPlayer != null) {
@@ -346,6 +385,29 @@ public class MainActivity extends Activity implements OnClickListener {
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
 
         if( resultCode == RESULT_OK  && (requestCode == GOOGLE_STT || requestCode == MY_UI) ){		//결과가 있으면
+
+
+
+            //녹음 쓰레드 시작
+            if(rec_flag == false) {
+
+                Log.i("TAG", "flag 시작");
+                //try {
+                //mRecAsyncTask = new RecAsyncTask();
+                //mFileName =  mRecAsyncTask.execute().get();
+                //Log.i("TAG", "mFileName" + mFileName);
+                //  } catch (Exception e) {
+                //     e.printStackTrace();
+                // }
+                startRecording();
+
+                rec_flag = true;
+            }
+
+
+
+
+
 
             TextView resultview = (TextView)findViewById(R.id.resulttext);
 
@@ -362,10 +424,41 @@ public class MainActivity extends Activity implements OnClickListener {
             mResult.toArray(result);									//	list 배열로 변환
 
             Log.d("Tag", result[0]);
+
+
+
             //totalResult.add(result[0]);
 
             finalResult += result[0];
             finalResult += "\n";
+
+            RequestParams req = new RequestParams();
+            req.put("query", result[0]);
+            client.post("http://back.palett.net:4434/Tagger", req, new AsyncHttpResponseHandler() {
+
+                @Override
+                public void onStart() {
+                    // called before request is started
+                }
+
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                    String result = new String(response, 0, response.length);
+                    String[] results = result.split(",");
+                    for(int i = 0; i < results.length; i++)
+                        keywords.add(results[i]);
+                }
+
+                @Override
+                public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                    // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                }
+
+                @Override
+                public void onRetry(int retryNo) {
+                    // called when request is retried
+                }
+            });
 
             resultview.setText(result[0]);
 
@@ -390,12 +483,33 @@ public class MainActivity extends Activity implements OnClickListener {
                 case SpeechRecognizer.ERROR_NETWORK:
                 case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
                     msg = "네트워크 오류가 발생했습니다.";
+
                     break;
                 case SpeechRecognizer.ERROR_NO_MATCH:
-                    msg = "일치하는 항목이 없습니다.";
+                    //msg = "일치하는 항목이 없습니다.";
+
+                    Log.i("tag","쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
+
+                    //녹음 쓰레드 종료
+                    //try {
+                    //if(mRecAsyncTask.isCancelled()==false) {
+                    //mRecAsyncTask.cancel(true);
+                    Log.i("rec","stoprec");
+                    //stopRecording();
+                    //}
+                    //}catch (NullPointerException e) {
+                    //    e.printStackTrace();
+                    //}
+                    //stopRecording();
+                    Log.i("tag","1111쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
+
+                    rec_flag = false;
+
                     Log.i("tag","last");
 
-
+                    msg = "대화상황이 아닙니다. 쓰레드 종료";
+                    startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);
+                    //일치하는 항목이 없어도 바로 다시 시작
 
 
                     /*
@@ -403,7 +517,7 @@ public class MainActivity extends Activity implements OnClickListener {
                         finalResult += totalResult.get(i);
                     }
 */
-                    resultview.setText(finalResult);
+                    //resultview.setText(finalResult);
                     break;
                 case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                     msg = "음성인식 서비스가 과부하 되었습니다.";
@@ -412,13 +526,32 @@ public class MainActivity extends Activity implements OnClickListener {
                     msg = "서버에서 오류가 발생했습니다.";
                     break;
                 case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                    msg = "입력이 없습니다.";
+                    //msg = "입력이 없습니다.";
 
 
-                    resultview.setText(finalResult);
+                    Log.i("tag","쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
+
+
+                    //녹음 쓰레드 종료
+
+
+                    stopRecording();
+
+
+                    Log.i("tag", "2221111쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
+                    //stopRecording();
+
+                    rec_flag = false;
+
+                    msg = "대화상황이 아닙니다. 쓰레드 종료";
+                    startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);
+                    //입력이 없어도 바로 다시 시작
+
+                    //resultview.setText(finalResult);
                     break;
             }
 
+            resultview.setText(finalResult);
             if(msg != null)		//오류 메시지가 null이 아니면 메시지 출력
                 Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
         }
