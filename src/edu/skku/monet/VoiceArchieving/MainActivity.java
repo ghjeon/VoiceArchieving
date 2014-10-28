@@ -1,592 +1,285 @@
 package edu.skku.monet.VoiceArchieving;
 
-import java.util.ArrayList;
-
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
-import android.os.Message;
-import android.os.Handler;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.content.Context;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
-import android.media.MediaRecorder;
-import android.media.MediaPlayer;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.loopj.android.http.AsyncHttpClient;
 
-import android.media.AudioFormat;
-
-import java.io.*;
-import java.util.Calendar;
-import java.util.List;
-
-import com.uraroji.garage.android.mp3recvoice.RecMicToMp3;
 import edu.skku.monet.VoiceArchieving.Archive.*;
+import javax.net.ssl.HttpsURLConnection;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import com.loopj.android.http.*;
 import org.apache.http.Header;
+import java.util.*;
 
-public class MainActivity extends Activity implements OnClickListener {
+/**
+ * 
+ * @author Lucas Santana
+ * 
+ *         Activity responsible for recording and sending sound to Google API
+ * 
+ */
 
-    private RecMicToMp3 mRecMicToMp3 = null;
-    AsyncHttpClient client = new AsyncHttpClient();
-    private final int FREQUENCY = 11025;
-    private final int CUSTOM_FREQ_SOAP = 1;
-    private final int OUT_FREQUENCY = FREQUENCY * CUSTOM_FREQ_SOAP;
-    private final int CHANNEL_CONTIGURATION = AudioFormat.CHANNEL_IN_STEREO;
-    private final int AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
-
-    private List<String> keywords = new ArrayList<String>();
-
-    private final int GOOGLE_STT = 1000, MY_UI=1001, ID3=1002, FILELIST=1003;				//requestCode. 구글음성인식, 내가 만든 Activity
-    private ArrayList<String> mResult;									//음성인식 결과 저장할 list
-    private ArrayList<String> totalResult;
-    String finalResult = "";
-    private String mSelectedString;										//결과 list 중 사용자가 선택한 텍스트
-    private TextView mResultTextView;									//최종 결과 출력하는 텍스트 뷰
+public class MainActivity extends Activity {
 
 
-    private static final String LOG_TAG = "AudioRecordTest";
+
+    private static String mFilePath = null;
     private static String mShortFileName = null;
     private static String mRShortFileName = null;
     private static String mFileName = null;
     private static String mRFileName = null;
 
-    private RecordButton mRecordButton = null;
-    private MediaRecorder mRecorder = null;
+    // Language spoken
+	// Obs: It requires Google codes: English(en_us), Portuguese(pt_br), Spanish
+	// (es_es), etc
+	String language = "ko_KR";
 
-    private PlayButton   mPlayButton = null;
-    private MediaPlayer   mPlayer = null;
+	// Key obtained through Google Developer group
+	String api_key = "AIzaSyB4yB2fBpMWCBaTcFyj4iKuoYgUu8dFqq4";
 
-    //flag - > 음성인식 api 가 첫번째 실행인지 아닌지 flag 가 false면 아직 실행안한거
-    private boolean rec_flag = false;
-    //RecAsyncTask mRecAsyncTask = null;
+	// URL for Google API
+	String root = "https://www.google.com/speech-api/v2/recognize";
+	String dwn = "down?maxresults=1&pair=";
+	String API_DOWN_URL = root + dwn;
+	String up_p1 = "up?lang=" + language
+			+ "&lm=dictation&client=chromium&pair=";
+	String up_p2 = "&key=";
 
+    String v2URL = "https://www.google.com/speech-api/v2/recognize";
+    String v2Params = "?output=json&lang=" + language + "&key=" + api_key;
 
+	
+	
+	// Variables used to establish return code
+	private static final long MIN = 10000000;
+	private static final long MAX = 900000009999999L;
+	long PAIR;
 
-    private void onRecord(boolean start) {
-        /* 녹음 버튼에 대한 onClick Event Process func */
-        if (start) {
-            startRecording();
-        } else {
-            stopRecording();
-        }
-    }
+	// Constants
+	private int mErrorCode = -1;
+	private static final int DIALOG_RECORDING_ERROR = 0;
+	// Rate of the recorded sound file
+	int sampleRate;
+	// Recorder instance
+	private Recorder mRecorder;
 
-    private void onPlay(boolean start) {
-        /* 재생 버튼에 대한 onClick Event Process func */
-        if (start) {
-            startPlaying();
-        } else {
-            stopPlaying();
-        }
-    }
+	// Output for Google answer
+	TextView txtView;
+	Button recordButton, stopButton, listenButton;
 
-    private void startPlaying() {
-        /* 재생 기능이 활성화 되었을때 */
-        mPlayer = new MediaPlayer(); // MediaPlayer 객체 생성
-        try {
-            mPlayer.setDataSource(mFileName); // 재생할 파일 할당
-            mPlayer.prepare(); // 초기화
-            mPlayer.start(); // 재생
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "prepare() failed");
-        }
-    }
+	// Handler used for sending request to Google API
+	Handler handler = new Handler();
 
-    private void stopPlaying() {
-        /* 재생 기능이 비활성화 되었을때 */
-        mPlayer.release(); // 할당 해제
-        mPlayer = null; // Object Destroy
-    }
+	// Recording callbacks
+	private Handler mRecordingHandler = new Handler(new Handler.Callback() {
+		public boolean handleMessage(Message m) {
+			switch (m.what) {
+			case FLACRecorder.MSG_AMPLITUDES:
+				FLACRecorder.Amplitudes amp = (FLACRecorder.Amplitudes) m.obj;
 
-    private void startRecording() {
-        /* 녹음 기능이 활성화 되었을때 */
-        /*
-        mRecorder = new MediaRecorder();  // MediaRecord 객체 생성
-        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC); // 음성을 입력할 소스 선택.
-        mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4); // 음성을 저장할 포맷 선택. DEFAULT = 3GP
-        mRecorder.setOutputFile(mFileName); // Class 생성시에 Constructor 에서 지정한 mFileName 이용해 출력 파일 설정
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC); // 음성을 저장할 코텍 선택
+				break;
 
-        try {
-            mRecorder.prepare(); // 레코더 초기화
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "prepare() failed");
-        }
+			case FLACRecorder.MSG_OK:
+				// Ignore
+				break;
 
-        mRecorder.start(); // 레코딩 시작
-        */
-        mRecMicToMp3.start();
-    }
+			case Recorder.MSG_END_OF_RECORDING:
 
-    private void stopRecording() {
-        /* 녹음 기능이 비활성화 되었을때 */
-        /*
-        mRecorder.stop(); //
-        mRecorder.reset();
-        mRecorder.release();
-        mRecorder = null;
-        */
-        mRecMicToMp3.stop();
+				break;
+
+			default:
+				mRecorder.stop();
+				mErrorCode = m.what;
+				showDialog(DIALOG_RECORDING_ERROR);
+				break;
+			}
+
+			return true;
+		}
+	});
+
+	/**************************************************************************************************************
+	 * Implementation
+	 **/
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+
+        mFilePath = Environment.getExternalStorageDirectory().getAbsolutePath();
+        mFilePath = mFilePath + "/edu.skku.VA/";
+        File dir = new File(mFilePath);
+        dir.mkdirs();
+
+		txtView = (TextView) this.findViewById(R.id.txtView);
+		recordButton = (Button) this.findViewById(R.id.record);
+		stopButton = (Button) this.findViewById(R.id.stop);
+		stopButton.setEnabled(false);
+		listenButton = (Button) this.findViewById(R.id.listen);
+		listenButton.setEnabled(false);
+
+		mRecorder = new Recorder(this, mRecordingHandler);
+
+	}
+
+	/***************************************************************************************************************
+	 * Method related to recording in FLAC file
+	 */
+
+	public void recordButton(View v) {
+
+        setFileName();
+
+		mRecorder.start(mFileName);
+
+		txtView.setText("");
+		recordButton.setEnabled(false);
+		stopButton.setEnabled(true);
+		Toast.makeText(getApplicationContext(), "Recording...",
+				Toast.LENGTH_LONG).show();
+
+	}
+
+	/***************************************************************************************************************
+	 * Method that stops recording
+	 */
+
+	public void stopRecording(View v) {
+
         mRFileName = mFileName;
         mFileName = "";
         mRShortFileName = mShortFileName;
         mShortFileName = "";
         Archive dbObject = new Archive(this.getApplicationContext());
-        Keyword kdbObject = new Keyword(this.getApplicationContext());
-        ArchiveKeywords akdbObject = new ArchiveKeywords(this.getApplicationContext());
+
         dbObject.Initialize(null, mRShortFileName, "", "", 0, System.currentTimeMillis() / 1000, 0, 0, mRFileName);
         dbObject.set();
-        String archiveId = dbObject.findByFileName(mRShortFileName).getId();
-        for(int i = 0; i < keywords.size(); i++)
-        {
-            Keyword fetchResult = kdbObject.findByKeyword(keywords.get(i));
-            if(fetchResult == null)
-            {
-                kdbObject.Initialize(0, keywords.get(i));
-                kdbObject.set();
-                fetchResult = kdbObject.findByKeyword(keywords.get(i));
-            }
-            akdbObject.Initialize(archiveId, fetchResult.getId(), 0);
-            akdbObject.set();
+
+
+		Toast.makeText(getApplicationContext(), "Loading...", Toast.LENGTH_LONG)
+				.show();
+		recordButton.setEnabled(true);
+		listenButton.setEnabled(true);
+
+		sampleRate = mRecorder.mFLACRecorder.getSampleRate();
+		getTranscriptionV2(sampleRate);
+		mRecorder.stop();
+
+	}
+
+	/***************************************************************************************************************
+	 * Method that listens to recording
+	 */
+	public void listenRecord(View v) {
+		Context context = this;
+
+		FLACPlayer mFlacPlayer = new FLACPlayer(context, mFileName);
+		mFlacPlayer.start();
+
+	}
+
+	/**************************************************************************************************************
+	 * Method related to Google Voice Recognition
+	 **/
+
+    public void getTranscriptionV2(int sampleRate) {
+
+        final Context dbContext = this.getApplicationContext();
+
+        String ctype = "audio/x-flac; rate=" + sampleRate;
+        AsyncHttpClient client = new AsyncHttpClient();
+        FileInputStream myfile = null;
+        try {
+            myfile = new FileInputStream(mFileName);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
-    }
+        client.addHeader("Content-Type", ctype);
 
-    class RecordButton extends Button {
-        /* RecordButton의 기능 정의. Button 으로부터 상속받아 구현됨 */
+        try {
+            HttpHandler handler = new HttpHandler(){
 
-        boolean mStartRecording = true; // 현재 레코딩 상황을 보관함
+                @Override
+                public void onResponse(String result) {
 
-        /* EventListener. Button Object에 대한 onClick Event, 즉 사용자가 버튼을 눌렀을 경우에 관한 Event를 통제하는 Listener. */
-        OnClickListener clicker = new OnClickListener() {
-            public void onClick(View v) {
-                onRecord(mStartRecording); //상단에 정의한 녹음 기능 처리를 위한 부분
-                if (mStartRecording) {
-                    setText("Stop recording"); // 버튼의 텍스트 세팅
-                } else {
-                    setText("Start recording"); // 버튼의 텍스트 세팅
+                    AsyncHttpClient client = new AsyncHttpClient();
+                    RequestParams req = new RequestParams();
+                    req.put("query", result);
+                    client.post("http://back.palett.net:4434/Tagger", req, new AsyncHttpResponseHandler() {
+
+                        @Override
+                        public void onStart() {
+                            // called before request is started
+                        }
+
+                        @Override
+                        public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                            List<String> keywords = new ArrayList<String>();
+                            String result = new String(response, 0, response.length);
+                            String[] results = result.split(",");
+                            for(int i = 0; i < results.length; i++)
+                                keywords.add(results[i]);
+
+                            Archive dbObject = new Archive(dbContext);
+                            Keyword kdbObject = new Keyword(dbContext);
+                            ArchiveKeywords akdbObject = new ArchiveKeywords(dbContext);
+
+                            String archiveId = dbObject.findByFileName(mRShortFileName).getId();
+                            for(int i = 0; i < keywords.size(); i++)
+                            {
+                                Keyword fetchResult = kdbObject.findByKeyword(keywords.get(i));
+                                if(fetchResult == null)
+                                {
+                                    kdbObject.Initialize(0, keywords.get(i));
+                                    kdbObject.set();
+                                    fetchResult = kdbObject.findByKeyword(keywords.get(i));
+                                }
+                                akdbObject.Initialize(archiveId, fetchResult.getId(), 0);
+                                akdbObject.set();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                            // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                        }
+
+                        @Override
+                        public void onRetry(int retryNo) {
+                            // called when request is retried
+                        }
+                    });
+                    Log.v("VA", result);
                 }
-                mStartRecording = !mStartRecording; // 현재 레코딩 상태를 변경함.
-            }
-        };
 
-        public RecordButton(Context ctx) { // Record Button Constructor
-            super(ctx);
-            setText("Start recording");
-            setOnClickListener(clicker);
+            };
+            handler.execute();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    class PlayButton extends Button {
-        /* PlayButton의 기능 정의. Button 으로부터 상속받아 구현됨 */
+    public void setFileName() {
 
-        boolean mStartPlaying = true; // 현재 레코딩 상황을 보관함
-
-        /* EventListener. Button Object에 대한 onClick Event, 즉 사용자가 버튼을 눌렀을 경우에 관한 Event를 통제하는 Listener. */
-        OnClickListener clicker = new OnClickListener() {
-            public void onClick(View v) {
-                onPlay(mStartPlaying); //상단에 정의한 재생 기능 처리를 위한 부분
-                if (mStartPlaying) {
-                    setText("Stop playing"); // 버튼의 텍스트 세팅
-                } else {
-                    setText("Start playingg"); // 버튼의 텍스트 세팅
-                }
-                mStartPlaying = !mStartPlaying; // 현재 재생 상태를 변경함.
-            }
-        };
-
-        public PlayButton(Context ctx) {  // Play Button Constructor
-            super(ctx);
-            setText("Start playing");
-            setOnClickListener(clicker);
-        }
-    }
-
-    public MainActivity() {
         Calendar c = Calendar.getInstance();
-        mFileName = Environment.getExternalStorageDirectory().getAbsolutePath(); // 실행중인 디바이스의 External Storage 경로를 절대경로로 확보
-        Log.e("VA", mFileName);
-        mFileName = mFileName + "/edu.skku.VA/";
-        Log.e("VA", mFileName);
-        File dir = new File(mFileName);
-// have the object build the directory structure, if needed.
-        dir.mkdirs();
         mShortFileName = "" + c.get(Calendar.YEAR) + (c.get(Calendar.MONTH)+1) + c.get(Calendar.DATE) + c.get(Calendar.HOUR_OF_DAY) + c.get(Calendar.MINUTE) + c.get(Calendar.MILLISECOND);
-        mFileName = mFileName + mShortFileName + ".mp3";
-        Log.e("VA", mFileName);
-        mRecMicToMp3 = new RecMicToMp3(
-                mFileName, 8000);
-        // 파일 이름 설정. External Storage Root 의 monet.VoiceArchieveing/{YEAR}{MONTH}{DATE}{HOUR}{MILLISECOND}.mp4 형식으로 저장함
+        mFileName = mFilePath + mShortFileName + ".flac";
     }
 
-    @Override
-    public void onCreate(Bundle icicle) {
-        /* Activity Initialize Event 발생시 수행되는 이벤트. UI Layout 관련 처리를 주로 수행함 */
-        super.onCreate(icicle);
-        mRecordButton = new RecordButton(this);
-        mPlayButton = new PlayButton(this);
-
-        setContentView(R.layout.main);
-
-
-
-        /*
-        LinearLayout ll = new LinearLayout(this); // 레이아웃 종류 선택
-        mRecordButton = new RecordButton(this);  // 레코드 버튼 객체 생성
-        ll.addView(mRecordButton,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        0)); // 앞서 선안한 레이아웃에 버튼 추가함
-        mPlayButton = new PlayButton(this);  // 재생 버튼 객체 생성
-        ll.addView(mPlayButton,
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        0)); // 앞서 선안한 레이아웃에 버튼 추가함
-                        */
-        findViewById(R.id.mPlayButton).setOnClickListener(this);
-        findViewById(R.id.mRecordButton).setOnClickListener(this);
-        findViewById(R.id.show).setOnClickListener(this);
-        findViewById(R.id.btnID3Activity).setOnClickListener(this);
-        findViewById(R.id.btnID3ReadActivity).setOnClickListener(this);
-        //setContentView(ll); // 어플리케이션 화면에 레이아웃 출력
-
-        mRecMicToMp3.setHandle(new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                    case RecMicToMp3.MSG_REC_STARTED:
-                        break;
-                    case RecMicToMp3.MSG_REC_STOPPED:
-                        break;
-                    case RecMicToMp3.MSG_ERROR_GET_MIN_BUFFERSIZE:
-                        Toast.makeText(MainActivity.this,
-                                "BUFFER_FAILED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    case RecMicToMp3.MSG_ERROR_CREATE_FILE:
-                        Toast.makeText(MainActivity.this, "WRITE_NOT_ALLOWED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    case RecMicToMp3.MSG_ERROR_REC_START:
-                        Toast.makeText(MainActivity.this, "REC_INIT_FAILED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    case RecMicToMp3.MSG_ERROR_AUDIO_RECORD:
-                        Toast.makeText(MainActivity.this, "REC_WORKING_FAILED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    case RecMicToMp3.MSG_ERROR_AUDIO_ENCODE:
-                        Toast.makeText(MainActivity.this, "AUDIO_ENCODE_FAILED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    case RecMicToMp3.MSG_ERROR_WRITE_FILE:
-
-                        Toast.makeText(MainActivity.this, "WRITE_FILE_FAILED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    case RecMicToMp3.MSG_ERROR_CLOSE_FILE:
-                        Toast.makeText(MainActivity.this, "FILE_CLOSE_FAILED",
-                                Toast.LENGTH_LONG).show();
-                        break;
-                    default:
-                        break;
-                }
-            }
-        });
-
-
-    }
-
-    @Override
-    public void onClick (View v) {
-        int view = v.getId();
-        if(view == R.id.show){
-
-            startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);			//내가 만든 activity 실행
-        }
-        else if(view == R.id.mPlayButton)
-        {
-            mPlayButton.callOnClick();
-        }
-        else if(view == R.id.mRecordButton)
-        {
-            mRecordButton.callOnClick();
-        }
-        else if(view == R.id.btnID3Activity)
-        {
-            Intent id3Intent = new Intent(this, FileListActivity.class);
-            try
-            {
-                //id3Intent.putExtra("ID3TagController", mFileName);
-                startActivityForResult(id3Intent, FILELIST);
-
-            } catch (Exception e)
-            {
-                e.getMessage();
-            }
-        }
-        else if(view == R.id.btnKeywordActivity)
-        {
-            Intent id3Intent = new Intent(this, KeywordListActivity.class);
-            try
-            {
-                //id3Intent.putExtra("ID3TagController", mFileName);
-                startActivityForResult(id3Intent, FILELIST);
-
-            } catch (Exception e)
-            {
-                e.getMessage();
-            }
-        }
-
-        else if(view == R.id.btnID3ReadActivity)
-        {
-            Intent id3Intent = new Intent(this, TagControlActivity.class);
-            try
-            {
-                id3Intent.putExtra("fileName", this.mRShortFileName);
-                startActivityForResult(id3Intent, ID3);
-
-            } catch (Exception e)
-            {
-                e.getMessage();
-            }
-        }
-
-    }
-
-    @Override
-    public void onPause() {
-        //Activity가 Focus를 상실한 경우에 발생하는 이벤트 처리
-        super.onPause();
-        if (mRecorder != null) {
-            mRecorder.release();
-            mRecorder = null;
-        }
-
-        if (mPlayer != null) {
-            mPlayer.release();
-            mPlayer = null;
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data){
-
-        if( resultCode == RESULT_OK  && (requestCode == GOOGLE_STT || requestCode == MY_UI) ){		//결과가 있으면
-
-
-
-            //녹음 쓰레드 시작
-            if(rec_flag == false) {
-
-                Log.i("TAG", "flag 시작");
-                //try {
-                //mRecAsyncTask = new RecAsyncTask();
-                //mFileName =  mRecAsyncTask.execute().get();
-                //Log.i("TAG", "mFileName" + mFileName);
-                //  } catch (Exception e) {
-                //     e.printStackTrace();
-                // }
-                startRecording();
-
-                rec_flag = true;
-            }
-
-
-
-
-
-
-            TextView resultview = (TextView)findViewById(R.id.resulttext);
-
-
-            Log.d("Tag", "print result");
-            String key = "";
-            if(requestCode == GOOGLE_STT)					//구글음성인식이면
-                key = RecognizerIntent.EXTRA_RESULTS;	//키값 설정
-            else if(requestCode == MY_UI)					//내가 만든 activity 이면
-                key = SpeechRecognizer.RESULTS_RECOGNITION;	//키값 설정
-
-            mResult = data.getStringArrayListExtra(key);		//인식된 데이터 list 받아옴.
-            String[] result = new String[mResult.size()];			//배열생성. 다이얼로그에서 출력하기 위해
-            mResult.toArray(result);									//	list 배열로 변환
-
-            Log.d("Tag", result[0]);
-
-
-
-            //totalResult.add(result[0]);
-
-            finalResult += result[0];
-            finalResult += "\n";
-
-            RequestParams req = new RequestParams();
-            req.put("query", result[0]);
-            client.post("http://back.palett.net:4434/Tagger", req, new AsyncHttpResponseHandler() {
-
-                @Override
-                public void onStart() {
-                    // called before request is started
-                }
-
-                @Override
-                public void onSuccess(int statusCode, Header[] headers, byte[] response) {
-                    String result = new String(response, 0, response.length);
-                    String[] results = result.split(",");
-                    for(int i = 0; i < results.length; i++)
-                        keywords.add(results[i]);
-                }
-
-                @Override
-                public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
-                    // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-                }
-
-                @Override
-                public void onRetry(int retryNo) {
-                    // called when request is retried
-                }
-            });
-
-            resultview.setText(result[0]);
-
-            startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);
-            //showSelectDialog(requestCode, data);				//결과를 다이얼로그로 출력.
-        }
-        else{															//결과가 없으면 에러 메시지 출력
-            String msg = null;
-
-            TextView resultview = (TextView)findViewById(R.id.resulttext);
-            //내가 만든 activity에서 넘어오는 오류 코드를 분류
-            switch(resultCode){
-                case SpeechRecognizer.ERROR_AUDIO:
-                    msg = "오디오 입력 중 오류가 발생했습니다.";
-                    break;
-                case SpeechRecognizer.ERROR_CLIENT:
-                    msg = "단말에서 오류가 발생했습니다.";
-                    break;
-                case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                    msg = "권한이 없습니다.";
-                    break;
-                case SpeechRecognizer.ERROR_NETWORK:
-                case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                    msg = "네트워크 오류가 발생했습니다.";
-
-                    break;
-                case SpeechRecognizer.ERROR_NO_MATCH:
-                    //msg = "일치하는 항목이 없습니다.";
-
-                    Log.i("tag","쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
-
-                    //녹음 쓰레드 종료
-                    //try {
-                    //if(mRecAsyncTask.isCancelled()==false) {
-                    //mRecAsyncTask.cancel(true);
-                    Log.i("rec","stoprec");
-                    //stopRecording();
-                    //}
-                    //}catch (NullPointerException e) {
-                    //    e.printStackTrace();
-                    //}
-                    //stopRecording();
-                    Log.i("tag","1111쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
-
-                    rec_flag = false;
-
-                    Log.i("tag","last");
-
-                    msg = "대화상황이 아닙니다. 쓰레드 종료";
-                    startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);
-                    //일치하는 항목이 없어도 바로 다시 시작
-
-
-                    /*
-                    for(int i = 0; totalResult.get(i)!=null ; i++) {
-                        finalResult += totalResult.get(i);
-                    }
-*/
-                    //resultview.setText(finalResult);
-                    break;
-                case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                    msg = "음성인식 서비스가 과부하 되었습니다.";
-                    break;
-                case SpeechRecognizer.ERROR_SERVER:
-                    msg = "서버에서 오류가 발생했습니다.";
-                    break;
-                case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                    //msg = "입력이 없습니다.";
-
-
-                    Log.i("tag","쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
-
-
-                    //녹음 쓰레드 종료
-
-
-                    stopRecording();
-
-
-                    Log.i("tag", "2221111쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분쓰레드 종료 부분");
-                    //stopRecording();
-
-                    rec_flag = false;
-
-                    msg = "대화상황이 아닙니다. 쓰레드 종료";
-                    startActivityForResult(new Intent(this, CustomUIActivity.class), MY_UI);
-                    //입력이 없어도 바로 다시 시작
-
-                    //resultview.setText(finalResult);
-                    break;
-            }
-
-            resultview.setText(finalResult);
-            if(msg != null)		//오류 메시지가 null이 아니면 메시지 출력
-                Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    //결과 list 출력하는 다이얼로그 생성
-    private void showSelectDialog(int requestCode, Intent data){
-        String key = "";
-        if(requestCode == GOOGLE_STT)					//구글음성인식이면
-            key = RecognizerIntent.EXTRA_RESULTS;	//키값 설정
-        else if(requestCode == MY_UI)					//내가 만든 activity 이면
-            key = SpeechRecognizer.RESULTS_RECOGNITION;	//키값 설정
-
-        mResult = data.getStringArrayListExtra(key);		//인식된 데이터 list 받아옴.
-        String[] result = new String[mResult.size()];			//배열생성. 다이얼로그에서 출력하기 위해
-        mResult.toArray(result);									//	list 배열로 변환
-
-        //1개 선택하는 다이얼로그 생성
-        AlertDialog ad = new AlertDialog.Builder(this).setTitle("선택하세요.")
-                .setSingleChoiceItems(result, -1, new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        mSelectedString = mResult.get(which);		//선택하면 해당 글자 저장
-                    }
-                })
-                .setPositiveButton("확인", new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        mResultTextView.setText("인식결과 : "+mSelectedString);		//확인 버튼 누르면 결과 출력
-                    }
-                })
-                .setNegativeButton("취소", new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        mResultTextView.setText("");		//취소버튼 누르면 초기화
-                        mSelectedString = null;
-                    }
-                }).create();
-        ad.show();
-    }
 }
