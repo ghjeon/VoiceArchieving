@@ -2,6 +2,7 @@ package edu.skku.monet.VoiceArchieving;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -35,7 +36,10 @@ import java.util.*;
 
 public class MainActivity extends Activity {
 
-
+    private final int KEYWORD_LIST_UI = 1000,
+                      KEYWORD_ARCHIVE_UI = 1001,
+                      ARCHIVE_LIST_UI = 1002,
+                      ARCHIVE_KEYWORD_UI = 1003;
 
     private static String mFilePath = null;
     private static String mShortFileName = null;
@@ -192,6 +196,35 @@ public class MainActivity extends Activity {
 		mFlacPlayer.start();
 
 	}
+
+    /***************************************************************************************************************
+     * Method that listens to recording
+     */
+
+    public void showKeywordList(View v) {
+        Intent keywordListIntent = new Intent(this, KeywordListActivity.class);
+        try
+        {
+            startActivityForResult(keywordListIntent, KEYWORD_LIST_UI);
+        } catch (Exception e) {
+            e.getMessage();
+        }
+
+    }
+
+    /***************************************************************************************************************
+     * Method that listens to recording
+     */
+
+    public void showArchiveList(View v) {
+        Intent archiveListIntent = new Intent(this, FileListActivity.class);
+        try
+        {
+            startActivityForResult(archiveListIntent, ARCHIVE_LIST_UI);
+        } catch (Exception e) {
+            e.getMessage();
+        }
+    }
 
 	/**************************************************************************************************************
 	 * Method related to Google Voice Recognition

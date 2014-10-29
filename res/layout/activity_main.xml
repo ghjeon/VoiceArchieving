@@ -51,5 +51,18 @@
         android:enabled="false"
         
         android:text="Listen" />
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View Archive List"
+            android:onClick="showArchiveList"
+            android:id="@+id/ArchiveButton" android:layout_alignTop="@+id/txtView" android:layout_alignParentLeft="true"
+            android:layout_marginTop="56dp"/>
+    <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="showKeywordList"
+            android:text="View Keyword List"
+            android:id="@+id/KeywordButton" android:layout_centerVertical="true" android:layout_alignParentLeft="true"/>
 
 </RelativeLayout>
