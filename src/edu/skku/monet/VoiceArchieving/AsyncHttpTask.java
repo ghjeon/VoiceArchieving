@@ -13,11 +13,14 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
 
-public class AsyncHttpTask extends AsyncTask<String, Void, String>{
+public class AsyncHttpTask extends AsyncTask<String, Void, String> {
 
     private HttpHandler httpHandler;
-    public AsyncHttpTask(HttpHandler httpHandler){
+    private String fileName;
+
+    public AsyncHttpTask(HttpHandler httpHandler, String fileName) {
         this.httpHandler = httpHandler;
+        this.fileName = fileName;
     }
 
     String language = "ko_KR";
@@ -26,7 +29,6 @@ public class AsyncHttpTask extends AsyncTask<String, Void, String>{
     String api_key = "AIzaSyB4yB2fBpMWCBaTcFyj4iKuoYgUu8dFqq4";
 
     // Name of the sound file (.flac)
-    String fileName = Environment.getExternalStorageDirectory()	+ "/recording.flac";
 
     // URL for Google API
     String root = "https://www.google.com/speech-api/v2/recognize";
@@ -52,7 +54,7 @@ public class AsyncHttpTask extends AsyncTask<String, Void, String>{
             con.setRequestProperty("AcceptEncoding", "gzip,deflate,sdch");
             con.setDoOutput(true);
             DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-            wr.write(IOUtils.readFile(Environment.getExternalStorageDirectory()	+ "/recording.flac"));
+            wr.write(IOUtils.readFile(fileName));
             wr.flush();
             wr.close();
             BufferedReader in = new BufferedReader(new InputStreamReader(
@@ -71,17 +73,18 @@ public class AsyncHttpTask extends AsyncTask<String, Void, String>{
 
         return result;
     }
+
     @Override
     protected void onPostExecute(String result) {
         httpHandler.onResponse(result);
     }
 
     //--------------------------------------------------------------------------------------------
-    private static String convertInputStreamToString(InputStream inputStream) throws IOException{
-        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+    private static String convertInputStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         String line = "";
         String result = "";
-        while((line = bufferedReader.readLine()) != null)
+        while ((line = bufferedReader.readLine()) != null)
             result += line;
 
         inputStream.close();
