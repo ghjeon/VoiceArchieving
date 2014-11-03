@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -26,6 +27,9 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import com.loopj.android.http.*;
 import org.apache.http.Header;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.*;
 
 /**
@@ -257,6 +261,13 @@ public class MainActivity extends Activity {
 
                     AsyncHttpClient client = new AsyncHttpClient();
                     RequestParams req = new RequestParams();
+                    try {
+                        JSONObject reader = new JSONObject(result);
+                        JSONArray resultData = reader.getJSONArray("result");
+                        result = resultData.getJSONObject(1).getString("transcript");
+                    } catch (Exception e) {
+
+                    }
                     req.put("query", result);
                     client.post("http://back.palett.net:1434/Tagger", req, new AsyncHttpResponseHandler() {
 
@@ -283,7 +294,7 @@ public class MainActivity extends Activity {
                                 Keyword fetchResult = kdbObject.findByKeyword(keywords.get(i));
                                 if(fetchResult == null)
                                 {
-                                    kdbObject.Initialize(0, keywords.get(i));
+                                    kdbObject.Initialize(Integer.getInteger(archiveId), keywords.get(i));
                                     kdbObject.set();
                                     fetchResult = kdbObject.findByKeyword(keywords.get(i));
                                 }
