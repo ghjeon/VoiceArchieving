@@ -264,7 +264,7 @@ public class MainActivity extends Activity {
                     try {
                         JSONObject reader = new JSONObject(result.replace("{\"result\":[]}", ""));
                         JSONArray resultData = reader.getJSONArray("result");
-                        recognizeResult = resultData.getJSONObject(1).getString("transcript");
+                        recognizeResult = resultData.getJSONObject(0).getJSONArray("alternative").getJSONObject(0).getString("transcript");
                     } catch (Exception e) {
 
                     }
@@ -294,7 +294,7 @@ public class MainActivity extends Activity {
                                 Keyword fetchResult = kdbObject.findByKeyword(keywords.get(i));
                                 if(fetchResult == null)
                                 {
-                                    kdbObject.Initialize(Integer.getInteger(archiveId), keywords.get(i));
+                                    kdbObject.Initialize(0, keywords.get(i));
                                     kdbObject.set();
                                     fetchResult = kdbObject.findByKeyword(keywords.get(i));
                                 }
