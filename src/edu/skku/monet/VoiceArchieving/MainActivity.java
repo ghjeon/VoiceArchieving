@@ -196,7 +196,8 @@ public class MainActivity extends Activity {
 
 	public void stopRecording(View v) {
 
-        stopRecording();
+        if(RECORDING)
+            stopRecording();
 
 	}
 
@@ -257,7 +258,7 @@ public class MainActivity extends Activity {
                     AsyncHttpClient client = new AsyncHttpClient();
                     RequestParams req = new RequestParams();
                     req.put("query", result);
-                    client.post("http://back.palett.net:4434/Tagger", req, new AsyncHttpResponseHandler() {
+                    client.post("http://back.palett.net:1434/Tagger", req, new AsyncHttpResponseHandler() {
 
                         @Override
                         public void onStart() {
@@ -347,7 +348,7 @@ public class MainActivity extends Activity {
             finalResult += result[0];
             finalResult += "\n";
 
-            resultview.setText(result[0]);
+            //resultview.setText(result[0]);
 
             startActivityForResult(new Intent(this, CustomUIActivity.class), VOICE_RECOGNIZE_SELF_UI);
             //showSelectDialog(requestCode, data);				//결과를 다이얼로그로 출력.

@@ -17,6 +17,7 @@ import java.util.List;
  */
 public class ArchiveKeywords {
     String archive_id;
+    String archiveName;
     int keyword;
     String keywordName;
     long time;
@@ -46,6 +47,14 @@ public class ArchiveKeywords {
         this.keywordName = keywordName;
     }
 
+    public ArchiveKeywords(String archive_id, String archiveName, int keyword, long time)
+    {
+        this.archive_id = archive_id;
+        this.archiveName = archiveName;
+        this.keyword = keyword;
+        this.time = time;
+    }
+
     public void Initialize(String archive_id, int keyword, long time)
     {
         this.archive_id = archive_id;
@@ -66,10 +75,14 @@ public class ArchiveKeywords {
         return this.archive_id;
     }
 
+    public String getArchiveName() { return this.archiveName; }
+
     public int getKeyword()
     {
         return this.keyword;
     }
+
+    public String getKeywordName() { return this.keywordName; }
 
     public long getTime() { return this.time; }
 
@@ -95,7 +108,7 @@ public class ArchiveKeywords {
         db.update(Constants.ARCHIVE_KEYWORD_DATABASE_NAME, c, "archive_id = ? AND keyword = ? ", new String[] { this.archive_id, Integer.toString(this.keyword) });
     }
 
-    public ArchiveKeywords findByArchive(String id) {
+    public List<ArchiveKeywords> findByArchive(String id) {
         Cursor res = db.rawQuery("SELECT a.archive_id, a.keyword, k.keyword AS keywordName, a.time FROM " +
                 Constants.ARCHIVE_KEYWORD_DATABASE_NAME +
                 " AS a INNER JOIN " +
@@ -103,21 +116,27 @@ public class ArchiveKeywords {
                 " AS k ON a.keyword = k.srl WHERE " +
                 "archive_id= '" + id + "' ORDER BY time asc;", null);
         res.moveToFirst();
-        return buildObject(res, true);
+        List<ArchiveKeywords> list = new ArrayList<ArchiveKeywords>();
+        while(res.isAfterLast() == false)
+        {
+            list.add(buildObject(res, true, 0));
+            res.moveToNext();
+        }
+        return list;
     }
 
     public List<ArchiveKeywords> findByKeyword(int keyword) {
-        Cursor res = db.rawQuery("SELECT a.archive_id, a.keyword, k.keyword AS keywordName, a.time FROM " +
+        Cursor res = db.rawQuery("SELECT a.archive_id, a.keyword, ar.title AS archiveName, a.time FROM " +
                 Constants.ARCHIVE_KEYWORD_DATABASE_NAME +
                 " AS a INNER JOIN " +
-                Constants.KEYWORD_DATABASE_NAME  +
-                " AS k ON a.keyword = k.srl WHERE " +
+                Constants.ARCHIVE_DATABASE_NAME  +
+                " AS ar ON a.archive_id = ar.id WHERE " +
                 "keyword = " + keyword + ";", null);
         res.moveToFirst();
         List<ArchiveKeywords> list = new ArrayList<ArchiveKeywords>();
         while(res.isAfterLast() == false)
         {
-            list.add(buildObject(res, true));
+            list.add(buildObject(res, true, 1));
             res.moveToNext();
         }
         return list;
@@ -134,7 +153,7 @@ public class ArchiveKeywords {
         List<ArchiveKeywords> list = new ArrayList<ArchiveKeywords>();
         while(res.isAfterLast() == false)
         {
-            list.add(buildObject(res, true));
+            list.add(buildObject(res, true, 0));
             res.moveToNext();
         }
         return list;
@@ -152,7 +171,7 @@ public class ArchiveKeywords {
         List<ArchiveKeywords> list = new ArrayList<ArchiveKeywords>();
         while(res.isAfterLast() == false)
         {
-            list.add(buildObject(res, true));
+            list.add(buildObject(res, true, 0));
             res.moveToNext();
         }
         return list;
@@ -162,15 +181,24 @@ public class ArchiveKeywords {
 
     }
 
-    private ArchiveKeywords buildObject(Cursor res, Boolean isJoined)
+    private ArchiveKeywords buildObject(Cursor res, Boolean isJoined, int typemode)
     {
         ArchiveKeywords result = null;
         if(isJoined)
-            result = new ArchiveKeywords(
-                    res.getString(res.getColumnIndex("archive_id")),
-                    res.getInt(res.getColumnIndex("keyword")),
-                    res.getLong(res.getColumnIndex("time")),
-                    res.getString(res.getColumnIndex("keywordName")));
+            if(typemode == 0) {
+                result = new ArchiveKeywords(
+                        res.getString(res.getColumnIndex("archive_id")),
+                        res.getInt(res.getColumnIndex("keyword")),
+                        res.getLong(res.getColumnIndex("time")),
+                        res.getString(res.getColumnIndex("keywordName")));
+            }
+            else if(typemode == 1) {
+                result = new ArchiveKeywords(
+                        res.getString(res.getColumnIndex("archive_id")),
+                        res.getString(res.getColumnIndex("archiveName")),
+                        res.getInt(res.getColumnIndex("keyword")),
+                        res.getLong(res.getColumnIndex("time")));
+            }
         else
             result = new ArchiveKeywords(
                     res.getString(res.getColumnIndex("archive_id")),

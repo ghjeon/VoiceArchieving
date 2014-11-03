@@ -18,7 +18,7 @@ public class Constants {
     public static final String KEYWORD_DATABASE_NAME = "keyword";
 
     public static final String ARCHIVE_DB_CREATE_STATEMENTS = "CREATE TABLE " + Constants.ARCHIVE_DATABASE_NAME +
-            " (id TEXT PRIMARY KEY, " +
+            "(id INTEGER primary key autoincrement, " +
             "title TEXT NOT NULL, " +
             "comment TEXT, " +
             "location TEXT, " +
