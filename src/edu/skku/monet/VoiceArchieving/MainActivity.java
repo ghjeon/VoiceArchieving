@@ -258,17 +258,17 @@ public class MainActivity extends Activity {
 
                 @Override
                 public void onResponse(String result) {
-
+                    String recognizeResult = "";
                     AsyncHttpClient client = new AsyncHttpClient();
                     RequestParams req = new RequestParams();
                     try {
-                        JSONObject reader = new JSONObject(result);
+                        JSONObject reader = new JSONObject(result.replace("{\"result\":[]}", ""));
                         JSONArray resultData = reader.getJSONArray("result");
-                        result = resultData.getJSONObject(1).getString("transcript");
+                        recognizeResult = resultData.getJSONObject(1).getString("transcript");
                     } catch (Exception e) {
 
                     }
-                    req.put("query", result);
+                    req.put("query", recognizeResult);
                     client.post("http://back.palett.net:1434/Tagger", req, new AsyncHttpResponseHandler() {
 
                         @Override
