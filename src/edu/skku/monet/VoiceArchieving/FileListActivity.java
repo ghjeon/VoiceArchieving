@@ -30,6 +30,7 @@ public class FileListActivity extends Activity {
 
     private Context thisContext = null;
     public AdapterView.OnItemClickListener listViewListener;
+    public AdapterView.OnItemLongClickListener listViewLongListener;
     public List<String> items = new ArrayList<String>();
     private Archive a;
     private int keywordId = -1;
@@ -62,23 +63,31 @@ public class FileListActivity extends Activity {
             }
         }
 
-
-
-        listViewListener = new AdapterView.OnItemClickListener() {
+        listViewLongListener = new AdapterView.OnItemLongClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
                 String fileName = items.get(i);
                 String id = (a.findByFileName(fileName)).getId();
 
                 Intent keywordListIntent = new Intent(thisContext, KeywordListActivity.class);
                 keywordListIntent.putExtra("archiveId", id);
                 startActivity(keywordListIntent);
+                return true;
+            }
+        };
+
+        listViewListener = new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                FLACPlayer fp = new FLACPlayer(thisContext, MainActivity.mFilePath + "/" + items.get(i) + ".flac");
+                fp.start();
             }
         };
         ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, items);
         ListView listContent = (ListView)findViewById(R.id.fileList);
         listContent.setAdapter(adapter);
         listContent.setOnItemClickListener(listViewListener);
+        listContent.setOnItemLongClickListener(listViewLongListener);
     }
 
     @Override

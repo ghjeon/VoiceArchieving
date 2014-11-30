@@ -68,7 +68,7 @@ public class AsyncHttpTask extends AsyncTask<String, Void, String> {
             in.close();
             result = response.toString();
         } catch (Exception e) {
-            Log.d("InputStream", e.getLocalizedMessage());
+            Log.d("InputStream", " " + e.getLocalizedMessage());
         }
 
         return result;

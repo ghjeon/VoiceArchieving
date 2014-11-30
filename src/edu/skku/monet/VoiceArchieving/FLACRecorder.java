@@ -13,7 +13,9 @@ package edu.skku.monet.VoiceArchieving;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import edu.skku.monet.VoiceArchieving.FLAC.FLACStreamEncoder;
 
@@ -113,15 +115,21 @@ public class FLACRecorder extends Thread
 
   // Stream encoder
   private FLACStreamEncoder       mEncoder;
-
+  private FLACStreamEncoder       mEncoder2;
+  private FLACStreamEncoder       mEncoder3;
   // File path for the output file.
   private String                  mPath;
 
   // Handler to notify at the above report interval
   private Handler                 mHandler;
+  private Handler                 tHandler;
 
   // Remember the duration of the recording. This is in msec.
   private double                  mDuration;
+
+  public int                      mChunk = 0;
+
+  public int                      mEncHandler = 1;
   
 //Rate of recorded sound
   private int sample_rate;
@@ -130,10 +138,11 @@ public class FLACRecorder extends Thread
   /***************************************************************************
    * Implementation
    **/
-  public FLACRecorder(String path, Handler handler)
+  public FLACRecorder(String path, Handler handler, Handler handler2)
   {
     mPath = path;
     mHandler = handler;
+    tHandler = handler2;
     Log.d(LTAG, "New FLACRecorder, path: " + mPath);
 
   }
@@ -288,7 +297,7 @@ public class FLACRecorder extends Thread
 
     mShouldRun = true;
     boolean oldShouldRecord = false;
-
+    Message m = new Message();
 
 
     try {
@@ -301,7 +310,7 @@ public class FLACRecorder extends Thread
       Log.d(LTAG, "Setting up encoder " + mPath + " rate: " + sample_rate + " channels: " + mapped_channels + " format " + mapped_format);
 
       mEncoder = new FLACStreamEncoder(mPath, sample_rate, mapped_channels, mapped_format);
-
+      mEncoder2 = new FLACStreamEncoder(mPath + "_" + mChunk, sample_rate, mapped_channels, mapped_format);
       // Start recording loop
       mDuration = 0.0;
       ByteBuffer buffer = ByteBuffer.allocateDirect(bufsize);
@@ -317,9 +326,16 @@ public class FLACRecorder extends Thread
             Log.d(LTAG, "Stop recording!");
             recorder.stop();
             mEncoder.flush();
+            if(mEncoder2 != null)
+              mEncoder2.flush();
+            if(mEncoder3 != null)
+              mEncoder3.flush();
           }
           oldShouldRecord = mShouldRecord;
         }
+
+        boolean msgSend1 = false;
+        boolean msgSend2 = false;
 
         // If we're supposed to be recording, read data.
         if (mShouldRecord) {
@@ -350,9 +366,95 @@ public class FLACRecorder extends Thread
                 // Compute time recorded
                 double read_ms = (1000.0 * result) / bytesPerSecond;
                 mDuration += read_ms;
+                Log.e("[VA]", " " + mDuration);
+                int mChunkTimer = (int)(mDuration/100);
+                int mSecond = (int)mDuration / 1000;
+                if(mSecond > 10 && (mChunkTimer % 141 == 0 && mChunkTimer % 282 != 0))
+                {
+                  Log.e("[VA]", "IN_HANDLE");
+                   if(mEncHandler != 2) {
+                     mEncHandler = 2;
+                     msgSend2 = false;
+                     Log.e("[VA]", "INIT_RECORDER");
+                     mEncoder3 = new FLACStreamEncoder(mPath + "_" + ++mChunk, sample_rate, mapped_channels, mapped_format);
+                   }
+                }
+                else if(mSecond > 10 && (mChunkTimer % 151 == 0 && mChunkTimer % 302 != 0))
+                {
+                  try {
+                    if(mEncoder2 != null) {
+                      mEncoder2.flush();
+                      mEncoder2.release();
+                      mEncoder2 = null;
+                    }
+                  } catch (Exception e) {
+                    e.printStackTrace();
+
+                }
+                    m = tHandler.obtainMessage();
+                    Bundle data = new Bundle();
+                    data.putString("fileName", mPath + "_" + (mChunk-1));
+                    data.putInt("chunkNo", mChunk-1);
+                    m.setData(data);
+
+                  if(msgSend1 == false) {
+                    Log.e("[VA]", "SEND MSG");
+                     try {
+                       tHandler.sendMessage(m);
+                       msgSend1 = true;
+                     } catch (Exception en) {
+                       en.printStackTrace();
+                     }
+                    Log.e("[VA]", "SEND END");
+                  }
+
+                }
+                else if(mSecond > 10 && mChunkTimer % 281 == 0)
+                {
+                  if(mEncHandler != 1) {
+                    msgSend1 = false;
+                    mEncHandler = 1;
+                    mEncoder2 = new FLACStreamEncoder(mPath + "_" + ++mChunk, sample_rate, mapped_channels, mapped_format);
+                  }
+                }
+                else if(mSecond > 10 && mChunkTimer % 291 == 0)
+                {
+                  try {
+                    if(mEncoder3 != null) {
+                      mEncoder3.flush();
+                      mEncoder3.release();
+                      mEncoder3 = null;
+                    }
+                    m = tHandler.obtainMessage();
+                    Bundle data = new Bundle();
+                    data.putString("fileName", mPath + "_" + (mChunk - 1));
+                    data.putInt("chunkNo", mChunk - 1);
+                    m.setData(data);
+                    if(msgSend2 == false)
+                    {
+                      try {
+                        tHandler.sendMessage(m);
+                        msgSend2 = true;
+                      } catch (Exception en) {
+                        en.printStackTrace();
+                      }
+                    }
+                  } catch (Exception e) {
+                    e.printStackTrace();
+                  }
+                }
+
+
 
                 //long start = System.currentTimeMillis();
                 int write_result = mEncoder.write(buffer, result);
+
+
+                if(mEncHandler == 2 && mEncoder3 != null)
+                    mEncoder3.write(buffer, result);
+                else if(mEncHandler == 1 && mEncoder2 != null)
+                    mEncoder2.write(buffer, result);
+
                 if (write_result != result) {
                   Log.e(LTAG, "Attempted to write " + result
                       + " but only wrote " + write_result);
@@ -371,7 +473,13 @@ public class FLACRecorder extends Thread
 
       recorder.release();
       mEncoder.release();
+      if(mEncoder2 != null)
+        mEncoder2.release();
+      if(mEncoder3 != null)
+        mEncoder3.release();
       mEncoder = null;
+      mEncoder2 = null;
+      mEncoder3 = null;
 
     } catch (IllegalArgumentException ex) {
       Log.e(LTAG, "Illegal argument: " + ex.getMessage());

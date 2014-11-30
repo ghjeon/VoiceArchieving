@@ -47,22 +47,26 @@ public class Recorder
 
   // Handler for messages sent by Recorder
   private Handler                 mUpchainHandler;
+  private Handler                 mUpchainHandler2;
   // Internal handler to hand to FLACRecorder.
-  private Handler                 mInternalHandler;  
-
-  // Overall recording metadata
+  private Handler                 mInternalHandler;
+  private Handler                 mInternalHandler2;
+    // Overall recording metadata
   private FLACRecorder.Amplitudes mAmplitudes;
   private FLACRecorder.Amplitudes mLastAmplitudes;
+
+  private Message lastMessage;
 
 
   /***************************************************************************
    * Implementation
    **/
-  public Recorder(Context context, Handler handler)
+  public Recorder(Context context, Handler handler, Handler handler2)
   {
     mContext = new WeakReference<Context>(context);
     
     mUpchainHandler = handler;
+    mUpchainHandler2 = handler2;
     mInternalHandler = new Handler(new Handler.Callback()
     {
       public boolean handleMessage(Message m)
@@ -105,6 +109,18 @@ public class Recorder
         }
       }
     });
+
+    mInternalHandler2 = new Handler(new Handler.Callback()
+      {
+          public boolean handleMessage(Message m)
+          {
+             if(lastMessage != m) {
+               mUpchainHandler2.obtainMessage(m.what, m.getData()).sendToTarget();
+               lastMessage = m;
+             }
+              return true;
+          }
+      });
   }
 
 
@@ -120,7 +136,7 @@ public class Recorder
     }
 
     // Start recording!
-    mFLACRecorder = new FLACRecorder( fileName, mInternalHandler);
+    mFLACRecorder = new FLACRecorder( fileName, mInternalHandler, mInternalHandler2);
     mFLACRecorder.start();
     mFLACRecorder.resumeRecording();
   }

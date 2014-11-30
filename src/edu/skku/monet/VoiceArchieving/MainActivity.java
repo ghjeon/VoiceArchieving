@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private boolean RECORDING = false;
 
 
-    private static String mFilePath = null;
+    public static String mFilePath = null;
     private static String mShortFileName = null;
     private static String mRShortFileName = null;
     private static String mFileName = null;
@@ -90,6 +90,8 @@ public class MainActivity extends Activity {
 	private static final long MAX = 900000009999999L;
 	long PAIR;
 
+    private int keywordNaN = 0;
+
 	// Constants
 	private int mErrorCode = -1;
 	private static final int DIALOG_RECORDING_ERROR = 0;
@@ -106,6 +108,18 @@ public class MainActivity extends Activity {
 	Handler handler = new Handler();
 
 	// Recording callbacks
+    private Handler mTranscriptionHandler = new Handler(new Handler.Callback() {
+        public boolean handleMessage(Message m) {
+            try {
+                getTranscriptionV2(0, ((Bundle)m.obj).getString("fileName"), ((Bundle)m.obj).getInt("chunkNo"));
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+            return true;
+        }
+    });
+
 	private Handler mRecordingHandler = new Handler(new Handler.Callback() {
 		public boolean handleMessage(Message m) {
 			switch (m.what) {
@@ -154,7 +168,7 @@ public class MainActivity extends Activity {
 		listenButton = (Button) this.findViewById(R.id.listen);
 		listenButton.setEnabled(false);
 
-		mRecorder = new Recorder(this, mRecordingHandler);
+		mRecorder = new Recorder(this, mRecordingHandler, mTranscriptionHandler);
 
 	}
 
@@ -166,7 +180,8 @@ public class MainActivity extends Activity {
 
         //startRecording();
 
-        startActivityForResult(new Intent(this, CustomUIActivity.class), VOICE_RECOGNIZE_SELF_UI);
+        //startActivityForResult(new Intent(this, CustomUIActivity.class), VOICE_RECOGNIZE_SELF_UI);
+        startRecording();
 
 	}
 
@@ -178,9 +193,9 @@ public class MainActivity extends Activity {
 
         RECORDING = false;
         mRFileName = mFileName;
-        mFileName = "";
+        //mFileName = "";
         mRShortFileName = mShortFileName;
-        mShortFileName = "";
+        //mShortFileName = "";
         Archive dbObject = new Archive(this.getApplicationContext());
 
         dbObject.Initialize(null, mRShortFileName, "", "", 0, System.currentTimeMillis() / 1000, 0, 0, mRFileName);
@@ -192,9 +207,10 @@ public class MainActivity extends Activity {
         recordButton.setEnabled(true);
         listenButton.setEnabled(true);
 
-        sampleRate = mRecorder.mFLACRecorder.getSampleRate();
-        getTranscriptionV2(sampleRate);
+        //sampleRate = mRecorder.mFLACRecorder.getSampleRate();
+        //getTranscriptionV2(sampleRate);
         mRecorder.stop();
+        keywordNaN = 0;
 
     }
 
@@ -211,8 +227,12 @@ public class MainActivity extends Activity {
 	public void listenRecord(View v) {
 		Context context = this;
 
-		FLACPlayer mFlacPlayer = new FLACPlayer(context, mFileName);
-		mFlacPlayer.start();
+        try {
+            FLACPlayer mFlacPlayer = new FLACPlayer(context, mRFileName);
+            mFlacPlayer.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 	}
 
@@ -318,6 +338,91 @@ public class MainActivity extends Activity {
 
             };
             handler.execute(mRFileName);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void getTranscriptionV2(int sampleRate, String fileName, int chunk) {
+
+        final Context dbContext = this.getApplicationContext();
+        final int chunkNo = chunk;
+        try {
+            HttpHandler handler = new HttpHandler(){
+
+                @Override
+                public void onResponse(String result) {
+                    String recognizeResult = "";
+                    AsyncHttpClient client = new AsyncHttpClient();
+                    RequestParams req = new RequestParams();
+                    try {
+                        JSONObject reader = new JSONObject(result.replace("{\"result\":[]}", ""));
+                        JSONArray resultData = reader.getJSONArray("result");
+                        recognizeResult = resultData.getJSONObject(1).getString("transcript");
+                    } catch (Exception e) {
+
+                    }
+                    req.put("query", recognizeResult);
+                    client.post("http://back.palett.net:1434/Tagger", req, new AsyncHttpResponseHandler() {
+
+                        @Override
+                        public void onStart() {
+                            // called before request is started
+                        }
+
+                        @Override
+                        public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                            List<String> keywords = new ArrayList<String>();
+                            String result = new String(response, 0, response.length);
+                            String[] results = result.split(",");
+                            for(int i = 0; i < results.length; i++)
+                                keywords.add(results[i]);
+
+                            Archive dbObject = new Archive(dbContext);
+                            Keyword kdbObject = new Keyword(dbContext);
+                            ArchiveKeywords akdbObject = new ArchiveKeywords(dbContext);
+
+                            String archiveId = dbObject.findByFileName(mShortFileName).getId();
+                            for(int i = 0; i < keywords.size(); i++)
+                            {
+                                Keyword fetchResult = kdbObject.findByKeyword(keywords.get(i));
+                                if(keywords.get(i) != "") {
+                                    if(fetchResult == null)
+                                    {
+                                        kdbObject.Initialize(Integer.parseInt(archiveId), keywords.get(i));
+                                        kdbObject.set();
+                                        fetchResult = kdbObject.findByKeyword(keywords.get(i));
+
+                                    }
+                                    akdbObject.Initialize(archiveId, fetchResult.getId(), chunkNo);
+                                    akdbObject.set();
+                                }
+                                else
+                                {
+                                    keywordNaN++;
+                                    if(keywordNaN > 2)
+                                        stopRecording();
+                                }
+
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(int statusCode, Header[] headers, byte[] errorResponse, Throwable e) {
+                            // called when response HTTP status is "4XX" (eg. 401, 403, 404)
+                        }
+
+                        @Override
+                        public void onRetry(int retryNo) {
+                            // called when request is retried
+                        }
+                    });
+                    Log.v("VA", result);
+                }
+
+            };
+            handler.execute(fileName);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -472,6 +577,10 @@ public class MainActivity extends Activity {
 
                 mRecorder.start(mFileName);
                 RECORDING = true;
+                Archive dbObject = new Archive(this.getApplicationContext());
+
+                dbObject.Initialize(null, mShortFileName, "", "", 0, System.currentTimeMillis() / 1000, 0, 0, mFileName);
+                dbObject.set();
 
                 txtView.setText("");
                 recordButton.setEnabled(false);
